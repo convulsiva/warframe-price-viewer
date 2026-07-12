@@ -34,7 +34,13 @@ jobs:
         run: npm ci
 
       - name: Build desktop app
-        run: npm run tauri:build
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            npm run tauri:build -- --bundles nsis
+          else
+            npm run tauri:build -- --bundles app,dmg
+          fi
 
       - name: Upload bundles
         uses: actions/upload-artifact@v4
