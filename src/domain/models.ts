@@ -45,7 +45,7 @@ export type MarketOrder = {
 
 export type OrderFilters = {
   type: "all" | OrderType;
-  status: "all" | UserStatus;
+  status: "all" | "active" | UserStatus;
   rank: "all" | number;
   minQuantity: number | null;
   platform: "all" | string;

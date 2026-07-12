@@ -25,6 +25,7 @@ export function OrderFilters({ orders, filters, onChange }: Props) {
         Status
         <select value={filters.status} onChange={(event) => onChange({ ...filters, status: event.target.value as OrderFiltersType["status"] })}>
           <option value="all">All</option>
+          <option value="active">Online + in game</option>
           <option value="ingame">In game</option>
           <option value="online">Online</option>
           <option value="offline">Offline</option>

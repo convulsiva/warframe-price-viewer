@@ -123,18 +123,18 @@ export function App() {
               </div>
 
               <div className="metrics">
-                <MetricCard label="Min sell" value={formatPlatinum(summary.minSell)} tone="cyan" />
+                <MetricCard label="Lowest online seller" value={formatPlatinum(sells[0]?.platinum ?? summary.minSell)} tone="cyan" />
                 <MetricCard label="Max buy" value={formatPlatinum(summary.maxBuy)} tone="gold" />
                 <MetricCard label="Spread" value={formatPlatinum(summary.spread)} tone="muted" />
                 <MetricCard label="Spread %" value={formatPercent(summary.spreadPercent)} tone="muted" />
                 <MetricCard label="Median sell" value={formatPlatinum(summary.medianSell)} tone="cyan" />
-                <MetricCard label="Active offers" value={String(summary.totalVisible)} tone="gold" />
+                <MetricCard label="Filtered offers" value={String(filtered.length)} tone="gold" />
               </div>
 
               <div className="status-line">
                 <span>Last update: {formatRelative(summary.lastUpdatedAt)}</span>
-                <span>Platform: mixed from API data</span>
-                <span>Cross Play: filterable when present</span>
+                <span>Default: online sellers, lowest price first</span>
+                <span>Cross Play and platform are filterable when present</span>
                 {isRefetching && <span>Refreshing...</span>}
                 {hasCachedOrders && <span>Using cached data</span>}
               </div>
@@ -148,8 +148,8 @@ export function App() {
 
               <OrderFilters orders={orders} filters={filters} onChange={setFilters} />
               <div className="orders-grid">
-                <OrderList title={`Best sellers (${sells.length})`} orders={sells} />
-                <OrderList title={`Best buyers (${buys.length})`} orders={buys} />
+                {filters.type !== "buy" && <OrderList title={`Best sellers (${sells.length})`} orders={sells} />}
+                {filters.type !== "sell" && <OrderList title={`Best buyers (${buys.length})`} orders={buys} />}
               </div>
             </section>
           )}

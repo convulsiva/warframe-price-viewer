@@ -1,8 +1,8 @@
 import type { MarketOrder, MarketSummary, OrderFilters } from "./models";
 
 export const defaultFilters: OrderFilters = {
-  type: "all",
-  status: "all",
+  type: "sell",
+  status: "active",
   rank: "all",
   minQuantity: null,
   platform: "all",
@@ -29,7 +29,8 @@ export function filterOrders(orders: MarketOrder[], filters: OrderFilters): Mark
   return orders.filter((order) => {
     if (!order.visible) return false;
     if (filters.type !== "all" && order.type !== filters.type) return false;
-    if (filters.status !== "all" && order.user?.status !== filters.status) return false;
+    if (filters.status === "active" && order.user?.status !== "ingame" && order.user?.status !== "online") return false;
+    if (filters.status !== "all" && filters.status !== "active" && order.user?.status !== filters.status) return false;
     if (filters.rank !== "all" && order.rank !== filters.rank) return false;
     if (filters.minQuantity !== null && order.quantity < filters.minQuantity) return false;
     if (filters.platform !== "all" && order.user?.platform !== filters.platform && order.user?.platform !== undefined) return false;
