@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { itemFixture, itemsFixture, ordersFixture, topOrdersFixture } from "../../src/test/fixtures/api";
 
 test("searches, opens prices, favorites, and persists after reload", async ({ page }) => {
-  await page.route("https://api.warframe.market/v2/**", async (route) => {
+  await page.route("**/api/wfm**", async (route) => {
     const url = route.request().url();
     const body = url.endsWith("/items")
       ? itemsFixture

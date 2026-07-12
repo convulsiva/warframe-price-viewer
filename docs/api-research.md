@@ -156,4 +156,4 @@ Riven details are part of the auction/contract area (`/auctions`, `riven/weapons
 
 ## CORS And Proxy
 
-Live browser-facing endpoints are designed for the frontend domain and may be subject to CORS policy changes. The MVP calls the public API directly. If CORS, User-Agent, or rate isolation becomes a problem, add a small server proxy/API route with server-side rate limiting and cache headers.
+Live browser-facing endpoints are designed for the frontend domain and may be subject to CORS policy changes. The MVP uses an app-relative `/api/wfm` path and Vite proxies it to `https://api.warframe.market/v2` in development and preview. This avoids browser CORS/edge failures observed during local testing. Production static hosting should provide the same rewrite/proxy, or `VITE_WARFRAME_MARKET_API_BASE_URL` should point to a compatible backend proxy.

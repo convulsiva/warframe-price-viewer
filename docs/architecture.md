@@ -7,7 +7,7 @@ The app is a read-only market viewer: search cached item metadata locally, selec
 ## Stack Options Considered
 
 - Next.js: strong server/proxy story, but heavier than needed for a client-first MVP and static deployment.
-- React + Vite: fast startup, simple static hosting, excellent TypeScript support, easy testing. Chosen.
+- React + Vite: fast startup, simple static hosting, excellent TypeScript support, easy testing, and a local API proxy. Chosen.
 - Tailwind/shadcn: good for design systems, but adds setup and generated component surface. For this MVP, custom CSS with semantic components is leaner.
 - TanStack Query vs custom cache: TanStack Query is proven for stale times, retries, dedupe, and background refresh. Chosen.
 - Fuse.js vs custom fuzzy search: Fuse.js is small and reliable. Chosen.
@@ -50,6 +50,7 @@ Components consume normalized domain models, not raw warframe.market response ob
 - Orders use short stale time and low-frequency background refresh.
 - Local favorites/recents persist in `localStorage`.
 - No request is made for each typed character; search uses the cached manifest.
+- API requests go to `/api/wfm` locally and are proxied to warframe.market by Vite to avoid browser CORS/edge-network failures.
 
 ## Errors
 
@@ -63,4 +64,4 @@ Components consume normalized domain models, not raw warframe.market response ob
 
 ## Deployment
 
-The app builds to static assets via `npm run build` and can be hosted on any static host. A proxy can be introduced later if the API requires server-side headers or stricter rate isolation.
+The app builds to static assets via `npm run build`. Production hosting should add a rewrite/proxy for `/api/wfm` to `https://api.warframe.market/v2`, or provide `VITE_WARFRAME_MARKET_API_BASE_URL` pointing at an equivalent backend proxy.

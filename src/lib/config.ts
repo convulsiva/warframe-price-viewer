@@ -1,7 +1,12 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  VITE_WARFRAME_MARKET_API_BASE_URL: z.string().url().default("https://api.warframe.market/v2"),
+  VITE_WARFRAME_MARKET_API_BASE_URL: z
+    .string()
+    .default("/api/wfm")
+    .refine((value) => value.startsWith("/") || URL.canParse(value), {
+      message: "API base URL must be an absolute URL or an app-relative path"
+    }),
   VITE_WARFRAME_MARKET_ASSET_BASE_URL: z.string().url().default("https://warframe.market/static/assets"),
   VITE_WARFRAME_MARKET_LANGUAGE: z.string().default("en"),
   VITE_WARFRAME_MARKET_PLATFORM: z.string().default("pc"),

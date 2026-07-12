@@ -35,7 +35,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-The default API base is `https://api.warframe.market/v2`.
+The default API base is `/api/wfm`, proxied by Vite to `https://api.warframe.market/v2` during local development and preview.
 
 ## Scripts
 
@@ -53,7 +53,7 @@ npm run build
 
 See [.env.example](/Users/ali/Desktop/warframe/warframe-price-viewer/.env.example).
 
-- `VITE_WARFRAME_MARKET_API_BASE_URL`: API base URL.
+- `VITE_WARFRAME_MARKET_API_BASE_URL`: API base URL. Defaults to `/api/wfm` for the Vite proxy.
 - `VITE_WARFRAME_MARKET_ASSET_BASE_URL`: base URL for images.
 - `VITE_WARFRAME_MARKET_LANGUAGE`: preferred language, default `en`.
 - `VITE_WARFRAME_MARKET_PLATFORM`: default platform, default `pc`.
@@ -105,4 +105,4 @@ docs           API research and architecture
 - Add richer statistics charts once `v2` statistics behavior is documented.
 - Add auction/riven exploration as a separate module.
 - Add deploy pipeline and production monitoring.
-- Add optional server proxy if CORS or rate policies change.
+- Add a production rewrite/proxy for `/api/wfm` when deploying to static hosting.
