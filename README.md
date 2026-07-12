@@ -2,7 +2,6 @@
 
 Modern dark UI for quickly checking Warframe item prices from the public warframe.market API.
 
-![Screenshot placeholder](public/screenshot-placeholder.svg)
 
 ## Features
 
