@@ -41,13 +41,37 @@ The default API base is `/api/wfm`, proxied by Vite to `https://api.warframe.mar
 
 ```bash
 npm run dev
+npm run tauri:dev
 npm run typecheck
 npm run lint
 npm run test
 npm run test:integration
 npm run test:e2e
 npm run build
+npm run tauri:build
 ```
+
+## Desktop App
+
+This project includes a Tauri desktop shell.
+
+Run the macOS desktop app in development mode:
+
+```bash
+npm run tauri:dev
+```
+
+Build a local macOS app and DMG:
+
+```bash
+npm run tauri:build
+open "src-tauri/target/release/bundle/macos/Warframe Price Viewer.app"
+open "src-tauri/target/release/bundle/dmg/Warframe Price Viewer_1.0.0_aarch64.dmg"
+```
+
+On macOS, if Gatekeeper blocks the unsigned local build, open `System Settings -> Privacy & Security` and choose `Open Anyway`.
+
+Windows installers (`.exe`/`.msi`) should be built on Windows or with the included GitHub Actions workflow. The source code is shared across macOS and Windows.
 
 ## Environment
 
@@ -89,6 +113,7 @@ src/features   search, market view, favorites, recents
 src/lib        config, hooks, storage, formatting
 src/test       test setup and fixtures
 tests/e2e      Playwright scenarios
+src-tauri      Tauri desktop shell and Rust API bridge
 docs           API research and architecture
 ```
 

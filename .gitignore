@@ -8,3 +8,4 @@ test-results/
 !.env.example
 *.local
 *.tsbuildinfo
+src-tauri/target/
