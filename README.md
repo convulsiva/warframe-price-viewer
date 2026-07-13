@@ -36,4 +36,4 @@ npm run tauri:build
 
 Windows and macOS builds are produced by the GitHub Actions desktop build workflow and published through GitHub Releases.
 
-<p align="center"><strong>created by convulsiva</strong></p>
+<p align="center"><strong>created by convulsiva <3</strong></p>
