@@ -1,14 +1,16 @@
 import { useEffect, useRef } from "react";
 import { fetchOrders } from "../../api/warframeMarket";
-import { defaultFilters, filterOrders, sortOrders } from "../../domain/market";
+import { sortOrders } from "../../domain/market";
 import type { FavoriteSnapshot, MarketOrder } from "../../domain/models";
 import { config } from "../../lib/config";
 import { formatPlatinum } from "../../lib/format";
 import { sendDesktopNotification } from "../../lib/notifications";
 import { useLibraryStore } from "./store";
 
-function lowestOnlineSellPrice(orders: MarketOrder[]): number | null {
-  const sellers = sortOrders(filterOrders(orders, defaultFilters)).filter((order) => order.type === "sell");
+export function lowestIngameSellPrice(orders: MarketOrder[]): number | null {
+  const sellers = sortOrders(
+    orders.filter((order) => order.visible && order.type === "sell" && order.user?.status === "ingame")
+  );
   return sellers[0]?.platinum ?? null;
 }
 
@@ -67,7 +69,7 @@ export function useFavoritePriceAlerts(favorites: FavoriteSnapshot[], online: bo
       try {
         const orders = await fetchOrders(favorite.slug);
         if (cancelled) return;
-        const nextPrice = lowestOnlineSellPrice(orders);
+        const nextPrice = lowestIngameSellPrice(orders);
         const notification = alertForFavorite(favorite, nextPrice);
         if (notification) {
           await sendDesktopNotification(notification);
