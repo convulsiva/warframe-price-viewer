@@ -8,6 +8,8 @@ type LibraryState = {
   addFavorite: (item: MarketItem, summary: MarketSummary) => void;
   removeFavorite: (slug: string) => void;
   isFavorite: (slug: string) => boolean;
+  updateFavoriteAlert: (slug: string, direction: "drop" | "rise", percent: number | null) => void;
+  updateFavoritePrice: (slug: string, price: number | null, alerted?: boolean) => void;
   addRecent: (item: MarketItem) => void;
   removeRecent: (slug: string) => void;
   clearRecents: () => void;
@@ -27,6 +29,9 @@ export const useLibraryStore = create<LibraryState>()(
           thumbUrl: item.thumbUrl,
           lastPrice,
           previousPrice: existing?.lastPrice ?? null,
+          alertDropPercent: existing?.alertDropPercent ?? null,
+          alertRisePercent: existing?.alertRisePercent ?? null,
+          lastAlertAt: existing?.lastAlertAt ?? null,
           updatedAt: new Date().toISOString()
         };
         set((state) => ({
@@ -36,6 +41,32 @@ export const useLibraryStore = create<LibraryState>()(
       removeFavorite: (slug) =>
         set((state) => ({ favorites: state.favorites.filter((favorite) => favorite.slug !== slug) })),
       isFavorite: (slug) => get().favorites.some((favorite) => favorite.slug === slug),
+      updateFavoriteAlert: (slug, direction, percent) =>
+        set((state) => ({
+          favorites: state.favorites.map((favorite) =>
+            favorite.slug === slug
+              ? {
+                  ...favorite,
+                  alertDropPercent: direction === "drop" ? percent : favorite.alertDropPercent,
+                  alertRisePercent: direction === "rise" ? percent : favorite.alertRisePercent
+                }
+              : favorite
+          )
+        })),
+      updateFavoritePrice: (slug, price, alerted = false) =>
+        set((state) => ({
+          favorites: state.favorites.map((favorite) =>
+            favorite.slug === slug
+              ? {
+                  ...favorite,
+                  previousPrice: favorite.lastPrice,
+                  lastPrice: price,
+                  lastAlertAt: alerted ? new Date().toISOString() : favorite.lastAlertAt,
+                  updatedAt: new Date().toISOString()
+                }
+              : favorite
+          )
+        })),
       addRecent: (item) => {
         const recent: RecentItem = {
           slug: item.slug,
@@ -50,6 +81,22 @@ export const useLibraryStore = create<LibraryState>()(
       removeRecent: (slug) => set((state) => ({ recents: state.recents.filter((entry) => entry.slug !== slug) })),
       clearRecents: () => set({ recents: [] })
     }),
-    { name: "warframe-price-viewer-library" }
+    {
+      name: "warframe-price-viewer-library",
+      version: 2,
+      migrate: (persisted) => {
+        const state = persisted as Partial<LibraryState>;
+        return {
+          ...state,
+          favorites:
+            state.favorites?.map((favorite) => ({
+              ...favorite,
+              alertDropPercent: favorite.alertDropPercent ?? null,
+              alertRisePercent: favorite.alertRisePercent ?? null,
+              lastAlertAt: favorite.lastAlertAt ?? null
+            })) ?? []
+        };
+      }
+    }
   )
 );

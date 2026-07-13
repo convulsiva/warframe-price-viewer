@@ -5,6 +5,7 @@ import { useItemDetailQuery, useItemsQuery, useOrdersQuery, useTopOrdersQuery } 
 import type { MarketItem } from "./domain/models";
 import { defaultFilters, filterOrders, sortOrders, summarizeOrders } from "./domain/market";
 import { LibraryPanel } from "./features/library/LibraryPanel";
+import { useFavoritePriceAlerts } from "./features/library/priceAlerts";
 import { useLibraryStore } from "./features/library/store";
 import { MetricCard } from "./features/market/MetricCard";
 import { OrderFilters } from "./features/market/OrderFilters";
@@ -12,6 +13,7 @@ import { OrderList } from "./features/market/OrderList";
 import { ItemSearch } from "./features/search/ItemSearch";
 import { formatPercent, formatPlatinum, formatRelative } from "./lib/format";
 import { useOnlineStatus } from "./lib/hooks";
+import { openExternalUrl } from "./lib/openExternal";
 
 export function App() {
   const online = useOnlineStatus();
@@ -26,7 +28,9 @@ export function App() {
   const addRecent = useLibraryStore((state) => state.addRecent);
   const addFavorite = useLibraryStore((state) => state.addFavorite);
   const removeFavorite = useLibraryStore((state) => state.removeFavorite);
+  const favorites = useLibraryStore((state) => state.favorites);
   const isFavorite = useLibraryStore((state) => (selectedSlug ? state.isFavorite(selectedSlug) : false));
+  useFavoritePriceAlerts(favorites, online);
 
   const orders = useMemo(() => {
     if (ordersQuery.data) return ordersQuery.data;
@@ -110,15 +114,16 @@ export function App() {
                   >
                     <RefreshCw size={18} aria-hidden="true" />
                   </button>
-                  <a
+                  <button
+                    type="button"
                     className="icon-button"
-                    href={`https://warframe.market/items/${item.slug}`}
-                    target="_blank"
-                    rel="noreferrer"
                     aria-label="Open on warframe.market"
+                    onClick={() => {
+                      void openExternalUrl(`https://warframe.market/items/${item.slug}`);
+                    }}
                   >
                     <ExternalLink size={18} aria-hidden="true" />
-                  </a>
+                  </button>
                 </div>
               </div>
 
@@ -133,6 +138,7 @@ export function App() {
 
               <div className="status-line">
                 <span>Last update: {formatRelative(summary.lastUpdatedAt)}</span>
+                <span>Auto-refresh: every 5s</span>
                 <span>Default: online sellers, lowest price first</span>
                 <span>Cross Play and platform are filterable when present</span>
                 {isRefetching && <span>Refreshing...</span>}

@@ -50,6 +50,11 @@ describe("App integration", () => {
     await userEvent.click(screen.getByRole("button", { name: /save/i }));
     await waitFor(() => expect(screen.getByRole("button", { name: /saved/i })).toBeInTheDocument());
     expect(screen.getAllByText("Lex Prime Set").length).toBeGreaterThan(1);
+
+    await userEvent.type(screen.getByLabelText(/lex prime set drop alert percent/i), "20");
+    await userEvent.type(screen.getByLabelText(/lex prime set rise alert percent/i), "40");
+    expect(screen.getByLabelText(/lex prime set drop alert percent/i)).toHaveValue(20);
+    expect(screen.getByLabelText(/lex prime set rise alert percent/i)).toHaveValue(40);
   });
 
   it("shows API errors", async () => {
