@@ -39,7 +39,8 @@ jobs:
           if [ "${{ runner.os }}" = "Windows" ]; then
             npm run tauri:build -- --bundles nsis
           else
-            npm run tauri:build -- --bundles app,dmg
+            npm run tauri:build -- --bundles app
+            ./scripts/package-macos-dmg.sh
           fi
 
       - name: Upload bundles

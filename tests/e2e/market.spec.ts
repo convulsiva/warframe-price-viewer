@@ -21,6 +21,7 @@ test("searches, opens prices, favorites, and persists after reload", async ({ pa
   await expect(page.getByText("5 pt").first()).toBeVisible();
   await expect(page.getByText("3 pt").first()).toBeVisible();
   await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("button", { name: "Saved" })).toBeVisible();
   await page.reload();
   await expect(page.getByText("Lex Prime Set").first()).toBeVisible();
   await expect(page.getByText("5 pt").first()).toBeVisible();
