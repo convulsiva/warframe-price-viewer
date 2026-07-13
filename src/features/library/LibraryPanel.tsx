@@ -12,6 +12,7 @@ export function LibraryPanel({ onOpen }: Props) {
   const favorites = useLibraryStore((state) => state.favorites);
   const recents = useLibraryStore((state) => state.recents);
   const removeFavorite = useLibraryStore((state) => state.removeFavorite);
+  const updateFavoriteAlert = useLibraryStore((state) => state.updateFavoriteAlert);
   const removeRecent = useLibraryStore((state) => state.removeRecent);
   const clearRecents = useLibraryStore((state) => state.clearRecents);
 
@@ -27,16 +28,48 @@ export function LibraryPanel({ onOpen }: Props) {
             favorite.lastPrice !== null && favorite.previousPrice !== null ? favorite.lastPrice - favorite.previousPrice : null;
           return (
             <div className="library-item" key={favorite.slug}>
-              <button type="button" onClick={() => onOpen(favorite.slug)}>
-                {favorite.thumbUrl && <img src={favorite.thumbUrl} alt="" />}
-                <span>
-                  <strong>{favorite.name}</strong>
-                  <small>
-                    {formatPlatinum(favorite.lastPrice)}
-                    {delta !== null ? ` (${delta >= 0 ? "+" : ""}${delta})` : ""}
-                  </small>
-                </span>
-              </button>
+              <div className="favorite-content">
+                <button type="button" onClick={() => onOpen(favorite.slug)}>
+                  {favorite.thumbUrl && <img src={favorite.thumbUrl} alt="" />}
+                  <span>
+                    <strong>{favorite.name}</strong>
+                    <small>
+                      {formatPlatinum(favorite.lastPrice)}
+                      {delta !== null ? ` (${delta >= 0 ? "+" : ""}${delta})` : ""}
+                    </small>
+                  </span>
+                </button>
+                <div className="alert-inputs">
+                  <label>
+                    Drop %
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      step="1"
+                      inputMode="numeric"
+                      placeholder="20"
+                      value={favorite.alertDropPercent ?? ""}
+                      aria-label={`${favorite.name} drop alert percent`}
+                      onChange={(event) => updateFavoriteAlert(favorite.slug, "drop", parseAlertPercent(event.target.value))}
+                    />
+                  </label>
+                  <label>
+                    Rise %
+                    <input
+                      type="number"
+                      min="1"
+                      max="500"
+                      step="1"
+                      inputMode="numeric"
+                      placeholder="40"
+                      value={favorite.alertRisePercent ?? ""}
+                      aria-label={`${favorite.name} rise alert percent`}
+                      onChange={(event) => updateFavoriteAlert(favorite.slug, "rise", parseAlertPercent(event.target.value))}
+                    />
+                  </label>
+                </div>
+              </div>
               <button className="icon-button" type="button" aria-label={`Remove ${favorite.name}`} onClick={() => removeFavorite(favorite.slug)}>
                 <X size={16} aria-hidden="true" />
               </button>
@@ -71,4 +104,11 @@ export function LibraryPanel({ onOpen }: Props) {
       </section>
     </aside>
   );
+}
+
+function parseAlertPercent(value: string): number | null {
+  if (value.trim() === "") return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.min(Math.round(parsed), 500);
 }

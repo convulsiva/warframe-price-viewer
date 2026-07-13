@@ -27,8 +27,9 @@ export const config = {
   requestTimeoutMs: 15000,
   itemStaleMs: 1000 * 60 * 60 * 12,
   itemGcMs: 1000 * 60 * 60 * 24 * 7,
-  orderStaleMs: 1000 * 60,
-  orderRefreshMs: 1000 * 60 * 5,
+  orderStaleMs: 1000 * 5,
+  orderRefreshMs: 1000 * 5,
+  favoriteAlertRefreshMs: 1000 * 12,
   searchDebounceMs: 180,
   maxSearchResults: 60
 } as const;

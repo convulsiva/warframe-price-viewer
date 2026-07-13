@@ -34,6 +34,8 @@ async fn fetch_warframe_market(path: String) -> Result<Value, String> {
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![fetch_warframe_market])
         .run(tauri::generate_context!())
         .expect("error while running Warframe Price Viewer");
