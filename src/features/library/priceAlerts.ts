@@ -2,38 +2,63 @@ import { useEffect, useRef } from "react";
 import { fetchOrders } from "../../api/warframeMarket";
 import { sortOrders } from "../../domain/market";
 import type { FavoriteSnapshot, MarketOrder } from "../../domain/models";
+import { writeClipboardText } from "../../lib/clipboard";
 import { config } from "../../lib/config";
 import { formatPlatinum } from "../../lib/format";
-import { sendDesktopNotification } from "../../lib/notifications";
+import { listenForNotificationActions, sendDesktopNotification } from "../../lib/notifications";
 import { useLibraryStore } from "./store";
 
-export function lowestIngameSellPrice(orders: MarketOrder[]): number | null {
+const PRICE_ALERT_ACTION_TYPE = "price-alert-actions";
+
+export function lowestIngameSellOrder(orders: MarketOrder[]): MarketOrder | null {
   const sellers = sortOrders(
     orders.filter((order) => order.visible && order.type === "sell" && order.user?.status === "ingame")
   );
-  return sellers[0]?.platinum ?? null;
+  return sellers[0] ?? null;
 }
 
-function percentChange(previous: number, next: number): number {
-  return ((next - previous) / previous) * 100;
+export function lowestIngameSellPrice(orders: MarketOrder[]): number | null {
+  return lowestIngameSellOrder(orders)?.platinum ?? null;
 }
 
-function alertForFavorite(favorite: FavoriteSnapshot, nextPrice: number | null): { title: string; body: string } | null {
-  if (favorite.lastPrice === null || favorite.lastPrice <= 0 || nextPrice === null) return null;
-  const change = percentChange(favorite.lastPrice, nextPrice);
-  const absoluteChange = Math.abs(change);
+export function whisperCommand(itemName: string, sellerName: string, price: number): string {
+  return `/w ${sellerName} Hi! I want to buy: "${itemName}" for ${price} platinum. (warframe.market)`;
+}
 
-  if (change < 0 && favorite.alertDropPercent !== null && absoluteChange >= favorite.alertDropPercent) {
+function shouldSendDropAlert(favorite: FavoriteSnapshot, nextPrice: number): boolean {
+  if (favorite.alertDropPrice === null || nextPrice > favorite.alertDropPrice) return false;
+  if (favorite.lastPrice === null) return true;
+  return favorite.lastPrice > favorite.alertDropPrice || nextPrice < favorite.lastPrice;
+}
+
+function shouldSendRiseAlert(favorite: FavoriteSnapshot, nextPrice: number): boolean {
+  if (favorite.alertRisePrice === null || nextPrice < favorite.alertRisePrice) return false;
+  if (favorite.lastPrice === null) return true;
+  return favorite.lastPrice < favorite.alertRisePrice || nextPrice > favorite.lastPrice;
+}
+
+function alertForFavorite(
+  favorite: FavoriteSnapshot,
+  order: MarketOrder | null
+): { title: string; body: string; command: string } | null {
+  if (!order || !order.user) return null;
+
+  const nextPrice = order.platinum;
+  const seller = order.user.name;
+
+  if (shouldSendDropAlert(favorite, nextPrice)) {
     return {
       title: `${favorite.name} price dropped`,
-      body: `${formatPlatinum(favorite.lastPrice)} -> ${formatPlatinum(nextPrice)} (${absoluteChange.toFixed(1)}% down)`
+      body: `${seller} sells for ${formatPlatinum(nextPrice)}. Click to copy whisper.`,
+      command: whisperCommand(favorite.name, seller, nextPrice)
     };
   }
 
-  if (change > 0 && favorite.alertRisePercent !== null && absoluteChange >= favorite.alertRisePercent) {
+  if (shouldSendRiseAlert(favorite, nextPrice)) {
     return {
       title: `${favorite.name} price increased`,
-      body: `${formatPlatinum(favorite.lastPrice)} -> ${formatPlatinum(nextPrice)} (${absoluteChange.toFixed(1)}% up)`
+      body: `Lowest ingame seller is now ${formatPlatinum(nextPrice)}. Click to copy whisper.`,
+      command: whisperCommand(favorite.name, seller, nextPrice)
     };
   }
 
@@ -47,6 +72,22 @@ export function useFavoritePriceAlerts(favorites: FavoriteSnapshot[], online: bo
   const updateFavoritePrice = useLibraryStore((state) => state.updateFavoritePrice);
 
   useEffect(() => {
+    let cleanup: (() => void) | undefined;
+
+    async function setup() {
+      cleanup = await listenForNotificationActions(async (command) => {
+        await writeClipboardText(command);
+      });
+    }
+
+    void setup();
+
+    return () => {
+      cleanup?.();
+    };
+  }, []);
+
+  useEffect(() => {
     favoritesRef.current = favorites;
   }, [favorites]);
 
@@ -58,7 +99,7 @@ export function useFavoritePriceAlerts(favorites: FavoriteSnapshot[], online: bo
     async function checkNextFavorite() {
       if (busyRef.current || cancelled) return;
       const watchedFavorites = favoritesRef.current.filter(
-        (favorite) => favorite.alertDropPercent !== null || favorite.alertRisePercent !== null
+        (favorite) => favorite.alertDropPrice !== null || favorite.alertRisePrice !== null
       );
       if (watchedFavorites.length === 0) return;
 
@@ -69,10 +110,16 @@ export function useFavoritePriceAlerts(favorites: FavoriteSnapshot[], online: bo
       try {
         const orders = await fetchOrders(favorite.slug);
         if (cancelled) return;
-        const nextPrice = lowestIngameSellPrice(orders);
-        const notification = alertForFavorite(favorite, nextPrice);
+        const order = lowestIngameSellOrder(orders);
+        const nextPrice = order?.platinum ?? null;
+        const notification = alertForFavorite(favorite, order);
         if (notification) {
-          await sendDesktopNotification(notification);
+          await sendDesktopNotification({
+            title: notification.title,
+            body: notification.body,
+            actionTypeId: PRICE_ALERT_ACTION_TYPE,
+            extra: { whisperCommand: notification.command }
+          });
         }
         updateFavoritePrice(favorite.slug, nextPrice, Boolean(notification));
       } catch {

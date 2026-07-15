@@ -1,6 +1,7 @@
 import { Star, Trash2, X } from "lucide-react";
 import type { MarketItem } from "../../domain/models";
 import { formatPlatinum } from "../../lib/format";
+import { SettingsPanel } from "../settings/SettingsPanel";
 import { useLibraryStore } from "./store";
 
 type Props = {
@@ -41,31 +42,31 @@ export function LibraryPanel({ onOpen }: Props) {
                 </button>
                 <div className="alert-inputs">
                   <label>
-                    Drop %
+                    {"Drop <="}
                     <input
                       type="number"
                       min="1"
-                      max="100"
+                      max="999999"
                       step="1"
                       inputMode="numeric"
-                      placeholder="20"
-                      value={favorite.alertDropPercent ?? ""}
-                      aria-label={`${favorite.name} drop alert percent`}
-                      onChange={(event) => updateFavoriteAlert(favorite.slug, "drop", parseAlertPercent(event.target.value))}
+                      placeholder="7"
+                      value={favorite.alertDropPrice ?? ""}
+                      aria-label={`${favorite.name} drop alert price`}
+                      onChange={(event) => updateFavoriteAlert(favorite.slug, "drop", parseAlertPrice(event.target.value))}
                     />
                   </label>
                   <label>
-                    Rise %
+                    {"Rise >="}
                     <input
                       type="number"
                       min="1"
-                      max="500"
+                      max="999999"
                       step="1"
                       inputMode="numeric"
-                      placeholder="40"
-                      value={favorite.alertRisePercent ?? ""}
-                      aria-label={`${favorite.name} rise alert percent`}
-                      onChange={(event) => updateFavoriteAlert(favorite.slug, "rise", parseAlertPercent(event.target.value))}
+                      placeholder="15"
+                      value={favorite.alertRisePrice ?? ""}
+                      aria-label={`${favorite.name} rise alert price`}
+                      onChange={(event) => updateFavoriteAlert(favorite.slug, "rise", parseAlertPrice(event.target.value))}
                     />
                   </label>
                 </div>
@@ -102,13 +103,14 @@ export function LibraryPanel({ onOpen }: Props) {
           </div>
         ))}
       </section>
+      <SettingsPanel />
     </aside>
   );
 }
 
-function parseAlertPercent(value: string): number | null {
+function parseAlertPrice(value: string): number | null {
   if (value.trim() === "") return null;
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) return null;
-  return Math.min(Math.round(parsed), 500);
+  return Math.min(Math.round(parsed), 999999);
 }

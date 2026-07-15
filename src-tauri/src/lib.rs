@@ -1,4 +1,8 @@
 use serde_json::Value;
+use tauri::{
+    tray::{MouseButton, MouseButtonState, TrayIconEvent},
+    Manager,
+};
 
 const WARFRAME_MARKET_API_BASE: &str = "https://api.warframe.market/v2";
 
@@ -32,11 +36,40 @@ async fn fetch_warframe_market(path: String) -> Result<Value, String> {
         .map_err(|error| format!("Invalid JSON: {error}"))
 }
 
+#[tauri::command]
+fn write_clipboard_text(text: String) -> Result<(), String> {
+    let mut clipboard = arboard::Clipboard::new().map_err(|error| format!("Clipboard unavailable: {error}"))?;
+    clipboard
+        .set_text(text)
+        .map_err(|error| format!("Clipboard write failed: {error}"))
+}
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![fetch_warframe_market])
+        .setup(|app| {
+            let handle = app.handle().clone();
+            handle.on_tray_icon_event(move |app, event| match event {
+                TrayIconEvent::Click {
+                    button: MouseButton::Left,
+                    button_state: MouseButtonState::Up,
+                    ..
+                }
+                | TrayIconEvent::DoubleClick {
+                    button: MouseButton::Left,
+                    ..
+                } => {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                }
+                _ => {}
+            });
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![fetch_warframe_market, write_clipboard_text])
         .run(tauri::generate_context!())
         .expect("error while running Warframe Price Viewer");
 }

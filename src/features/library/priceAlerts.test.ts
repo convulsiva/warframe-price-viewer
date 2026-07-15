@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MarketOrder } from "../../domain/models";
-import { lowestIngameSellPrice } from "./priceAlerts";
+import { lowestIngameSellPrice, whisperCommand } from "./priceAlerts";
 
 const baseUser = {
   id: "user",
@@ -42,5 +42,11 @@ describe("price alerts", () => {
         order({ id: "ingame", platinum: 5 })
       ])
     ).toBe(5);
+  });
+
+  it("builds the in-game whisper command for the seller and exact price", () => {
+    expect(whisperCommand("Lex Prime Set", "Seller", 5)).toBe(
+      '/w Seller Hi! I want to buy: "Lex Prime Set" for 5 platinum. (warframe.market)'
+    );
   });
 });
