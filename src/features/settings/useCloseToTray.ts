@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { useEffect } from "react";
 import { useSettingsStore } from "./store";
 
 function isTauriRuntime(): boolean {
@@ -7,37 +8,9 @@ function isTauriRuntime(): boolean {
 
 export function useCloseToTray() {
   const closeToTray = useSettingsStore((state) => state.closeToTray);
-  const closeToTrayRef = useRef(closeToTray);
 
   useEffect(() => {
-    closeToTrayRef.current = closeToTray;
+    if (!isTauriRuntime()) return;
+    void invoke("set_close_to_tray_enabled", { enabled: closeToTray });
   }, [closeToTray]);
-
-  useEffect(() => {
-    if (!isTauriRuntime()) return undefined;
-
-    let disposed = false;
-    let cleanup: (() => void) | undefined;
-
-    async function setup() {
-      const { getCurrentWindow } = await import("@tauri-apps/api/window");
-      if (disposed) return;
-
-      const appWindow = getCurrentWindow();
-      const unlisten = await appWindow.onCloseRequested((event) => {
-        if (!closeToTrayRef.current) return;
-        event.preventDefault();
-        void appWindow.hide();
-      });
-
-      cleanup = unlisten;
-    }
-
-    void setup();
-
-    return () => {
-      disposed = true;
-      cleanup?.();
-    };
-  }, []);
 }

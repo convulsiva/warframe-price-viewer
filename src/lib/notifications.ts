@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import type * as TauriNotificationModule from "@tauri-apps/plugin-notification";
 
 type NotificationPayload = {
@@ -12,14 +13,19 @@ let actionTypesRegistered = false;
 export async function sendDesktopNotification(payload: NotificationPayload): Promise<void> {
   if (isTauriRuntime()) {
     const notification = await import("@tauri-apps/plugin-notification");
-    await registerPriceAlertActions(notification);
     const granted = (await notification.isPermissionGranted()) || (await notification.requestPermission()) === "granted";
     if (granted) {
-      notification.sendNotification({
-        ...payload,
-        autoCancel: true,
-        actionTypeId: payload.actionTypeId ?? "price-alert-actions"
-      });
+      const whisperCommand = payload.extra?.whisperCommand;
+      if (typeof whisperCommand === "string" && whisperCommand.length > 0) {
+        await invoke("send_price_alert_notification", {
+          title: payload.title,
+          body: payload.body,
+          whisperCommand
+        });
+        return;
+      }
+
+      notification.sendNotification({ ...payload, autoCancel: true });
     }
     return;
   }

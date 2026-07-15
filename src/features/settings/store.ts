@@ -9,12 +9,16 @@ type SettingsState = {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
-      closeToTray: false,
+      closeToTray: true,
       setCloseToTray: (enabled) => set({ closeToTray: enabled })
     }),
     {
       name: "warframe-price-viewer-settings",
-      version: 1
+      version: 2,
+      migrate: (persistedState) => ({
+        ...(persistedState as Partial<SettingsState>),
+        closeToTray: true
+      })
     }
   )
 );
