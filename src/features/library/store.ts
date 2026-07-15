@@ -8,7 +8,7 @@ type LibraryState = {
   addFavorite: (item: MarketItem, summary: MarketSummary) => void;
   removeFavorite: (slug: string) => void;
   isFavorite: (slug: string) => boolean;
-  updateFavoriteAlert: (slug: string, direction: "drop" | "rise", percent: number | null) => void;
+  updateFavoriteAlert: (slug: string, direction: "drop" | "rise", price: number | null) => void;
   updateFavoritePrice: (slug: string, price: number | null, alerted?: boolean) => void;
   addRecent: (item: MarketItem) => void;
   removeRecent: (slug: string) => void;
@@ -29,8 +29,8 @@ export const useLibraryStore = create<LibraryState>()(
           thumbUrl: item.thumbUrl,
           lastPrice,
           previousPrice: existing?.lastPrice ?? null,
-          alertDropPercent: existing?.alertDropPercent ?? null,
-          alertRisePercent: existing?.alertRisePercent ?? null,
+          alertDropPrice: existing?.alertDropPrice ?? null,
+          alertRisePrice: existing?.alertRisePrice ?? null,
           lastAlertAt: existing?.lastAlertAt ?? null,
           updatedAt: new Date().toISOString()
         };
@@ -41,14 +41,14 @@ export const useLibraryStore = create<LibraryState>()(
       removeFavorite: (slug) =>
         set((state) => ({ favorites: state.favorites.filter((favorite) => favorite.slug !== slug) })),
       isFavorite: (slug) => get().favorites.some((favorite) => favorite.slug === slug),
-      updateFavoriteAlert: (slug, direction, percent) =>
+      updateFavoriteAlert: (slug, direction, price) =>
         set((state) => ({
           favorites: state.favorites.map((favorite) =>
             favorite.slug === slug
               ? {
                   ...favorite,
-                  alertDropPercent: direction === "drop" ? percent : favorite.alertDropPercent,
-                  alertRisePercent: direction === "rise" ? percent : favorite.alertRisePercent
+                  alertDropPrice: direction === "drop" ? price : favorite.alertDropPrice,
+                  alertRisePrice: direction === "rise" ? price : favorite.alertRisePrice
                 }
               : favorite
           )
@@ -83,16 +83,18 @@ export const useLibraryStore = create<LibraryState>()(
     }),
     {
       name: "warframe-price-viewer-library",
-      version: 2,
+      version: 3,
       migrate: (persisted) => {
-        const state = persisted as Partial<LibraryState>;
+        const state = persisted as Partial<LibraryState> & {
+          favorites?: Array<Partial<FavoriteSnapshot> & { alertDropPercent?: number | null; alertRisePercent?: number | null }>;
+        };
         return {
           ...state,
           favorites:
             state.favorites?.map((favorite) => ({
               ...favorite,
-              alertDropPercent: favorite.alertDropPercent ?? null,
-              alertRisePercent: favorite.alertRisePercent ?? null,
+              alertDropPrice: favorite.alertDropPrice ?? null,
+              alertRisePrice: favorite.alertRisePrice ?? null,
               lastAlertAt: favorite.lastAlertAt ?? null
             })) ?? []
         };

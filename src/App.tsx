@@ -1,4 +1,4 @@
-import { ExternalLink, RefreshCw, Star, WifiOff } from "lucide-react";
+import { ExternalLink, Home, RefreshCw, Star, WifiOff } from "lucide-react";
 import { useMemo, useState } from "react";
 import { isApiError, messageForError } from "./api/errors";
 import { useItemDetailQuery, useItemsQuery, useOrdersQuery, useTopOrdersQuery } from "./api/warframeMarket";
@@ -11,6 +11,7 @@ import { MetricCard } from "./features/market/MetricCard";
 import { OrderFilters } from "./features/market/OrderFilters";
 import { OrderList } from "./features/market/OrderList";
 import { ItemSearch } from "./features/search/ItemSearch";
+import { useCloseToTray } from "./features/settings/useCloseToTray";
 import { formatPercent, formatPlatinum, formatRelative } from "./lib/format";
 import { useOnlineStatus } from "./lib/hooks";
 import { openExternalUrl } from "./lib/openExternal";
@@ -29,7 +30,9 @@ export function App() {
   const addFavorite = useLibraryStore((state) => state.addFavorite);
   const removeFavorite = useLibraryStore((state) => state.removeFavorite);
   const favorites = useLibraryStore((state) => state.favorites);
+  const recents = useLibraryStore((state) => state.recents);
   const isFavorite = useLibraryStore((state) => (selectedSlug ? state.isFavorite(selectedSlug) : false));
+  useCloseToTray();
   useFavoritePriceAlerts(favorites, online);
 
   const orders = useMemo(() => {
@@ -41,6 +44,17 @@ export function App() {
   const filtered = useMemo(() => sortOrders(filterOrders(orders, filters)), [orders, filters]);
   const sells = filtered.filter((order) => order.type === "sell");
   const buys = filtered.filter((order) => order.type === "buy");
+  const lowestIngameSellPrice = useMemo(
+    () => sortOrders(orders.filter((order) => order.visible && order.type === "sell" && order.user?.status === "ingame"))[0]?.platinum ?? null,
+    [orders]
+  );
+  const favoriteSummary = useMemo(
+    () => ({
+      ...summary,
+      minSell: lowestIngameSellPrice ?? summary.minSell
+    }),
+    [lowestIngameSellPrice, summary]
+  );
   const isLoadingOrders = topOrdersQuery.isLoading || ordersQuery.isLoading;
   const isRefetching = topOrdersQuery.isRefetching || ordersQuery.isRefetching;
   const hasCachedOrders = orders.length > 0 && (topOrdersQuery.isError || ordersQuery.isError);
@@ -59,6 +73,11 @@ export function App() {
     if (manifestItem) addRecent(manifestItem);
   }
 
+  function goHome() {
+    setSelectedSlug(null);
+    setFilters(defaultFilters);
+  }
+
   return (
     <main className="app-shell">
       <section className="top-band">
@@ -66,9 +85,15 @@ export function App() {
           <p className="eyebrow">Warframe market scanner</p>
           <h1>Price console</h1>
         </div>
-        <div className={online ? "connection online" : "connection offline"}>
-          {!online && <WifiOff size={16} aria-hidden="true" />}
-          {online ? "Online" : "Offline"}
+        <div className="top-actions">
+          <button type="button" className="ghost-button" onClick={goHome}>
+            <Home size={17} aria-hidden="true" />
+            Home
+          </button>
+          <div className={online ? "connection online" : "connection offline"}>
+            {!online && <WifiOff size={16} aria-hidden="true" />}
+            {online ? "Online" : "Offline"}
+          </div>
         </div>
       </section>
 
@@ -76,7 +101,7 @@ export function App() {
         <section className="workspace">
           <ItemSearch items={itemsQuery.data ?? []} loading={itemsQuery.isLoading} onSelect={selectItem} />
           {itemsQuery.isError && <StateBanner tone="danger" text={messageForError(itemsQuery.error)} />}
-          {!selectedSlug && <InitialState />}
+          {!selectedSlug && <MainMenu favoriteCount={favorites.length} recentCount={recents.length} watchedCount={favorites.filter((favorite) => favorite.alertDropPrice !== null || favorite.alertRisePrice !== null).length} />}
           {selectedSlug && item && (
             <section className="market-view" aria-live="polite">
               <div className="item-header">
@@ -97,7 +122,7 @@ export function App() {
                   <button
                     type="button"
                     className="primary-button"
-                    onClick={() => (isFavorite ? removeFavorite(item.slug) : addFavorite(item, summary))}
+                    onClick={() => (isFavorite ? removeFavorite(item.slug) : addFavorite(item, favoriteSummary))}
                     aria-pressed={isFavorite}
                   >
                     <Star size={17} aria-hidden="true" />
@@ -166,11 +191,28 @@ export function App() {
   );
 }
 
-function InitialState() {
+function MainMenu({ favoriteCount, recentCount, watchedCount }: { favoriteCount: number; recentCount: number; watchedCount: number }) {
   return (
     <section className="initial-state">
-      <h2>Search a tradable item to open the market console.</h2>
-      <p>Suggestions use the locally cached item manifest, so typing does not hammer the API.</p>
+      <div>
+        <p className="eyebrow">Main menu</p>
+        <h2>Search an item or continue from your library.</h2>
+        <p>Favorites with price targets keep monitoring in the background while the app is running.</p>
+      </div>
+      <div className="menu-grid">
+        <div>
+          <strong>{favoriteCount}</strong>
+          <span>favorites</span>
+        </div>
+        <div>
+          <strong>{watchedCount}</strong>
+          <span>watched alerts</span>
+        </div>
+        <div>
+          <strong>{recentCount}</strong>
+          <span>recent items</span>
+        </div>
+      </div>
     </section>
   );
 }

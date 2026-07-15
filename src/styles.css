@@ -5,14 +5,15 @@
   background: #06080c;
   color: #eef7f8;
   --bg: #06080c;
-  --surface: rgba(12, 18, 25, 0.88);
-  --surface-strong: rgba(15, 24, 34, 0.96);
-  --line: rgba(139, 178, 194, 0.16);
-  --line-strong: rgba(122, 216, 226, 0.32);
-  --text-soft: #aab8c1;
-  --cyan: #70d7e5;
-  --gold: #e9c46a;
-  --green: #8ce99a;
+  --surface: rgba(16, 23, 29, 0.9);
+  --surface-strong: rgba(21, 31, 39, 0.96);
+  --line: rgba(174, 197, 207, 0.16);
+  --line-strong: rgba(126, 207, 208, 0.34);
+  --text-soft: #b1bec5;
+  --cyan: #7ed2d0;
+  --gold: #f0c66d;
+  --green: #8ee1a1;
+  --accent: #d7aefb;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
@@ -25,10 +26,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 18% 0%, rgba(112, 215, 229, 0.16), transparent 28rem),
-    radial-gradient(circle at 88% 18%, rgba(233, 196, 106, 0.08), transparent 22rem),
-    linear-gradient(135deg, #06080c 0%, #0b1117 48%, #071016 100%);
+  background: linear-gradient(135deg, #070a0f 0%, #111820 42%, #081316 100%);
 }
 
 button,
@@ -111,10 +109,18 @@ h3 {
   align-items: center;
   gap: 8px;
   border: 1px solid rgba(130, 156, 178, 0.24);
-  border-radius: 8px;
+  border-radius: 999px;
   padding: 9px 12px;
   background: var(--surface);
   color: var(--text-soft);
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .connection.online {
@@ -138,8 +144,8 @@ h3 {
 .order-panel,
 .initial-state {
   border: 1px solid rgba(137, 174, 193, 0.16);
-  border-radius: 8px;
-  background: linear-gradient(180deg, rgba(15, 24, 34, 0.94), rgba(8, 13, 20, 0.9));
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(22, 32, 41, 0.94), rgba(10, 16, 23, 0.9));
   box-shadow: 0 20px 70px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(14px);
 }
@@ -169,7 +175,7 @@ h3 {
   align-items: center;
   gap: 10px;
   border: 1px solid var(--line-strong);
-  border-radius: 8px;
+  border-radius: 14px;
   padding: 0 12px;
   background: rgba(4, 8, 13, 0.92);
 }
@@ -190,7 +196,7 @@ h3 {
   max-height: 420px;
   overflow: auto;
   border: 1px solid rgba(117, 217, 232, 0.2);
-  border-radius: 8px;
+  border-radius: 16px;
   background: #080f17;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
   display: none;
@@ -249,6 +255,33 @@ small,
 .initial-state {
   padding: 44px;
   min-height: 300px;
+  display: grid;
+  align-content: center;
+  gap: 24px;
+}
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.menu-grid div {
+  border: 1px solid rgba(174, 197, 207, 0.14);
+  border-radius: 16px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.menu-grid strong {
+  display: block;
+  color: var(--cyan);
+  font-size: 1.8rem;
+}
+
+.menu-grid span {
+  color: var(--text-soft);
+  font-size: 0.86rem;
 }
 
 .market-view {
@@ -272,7 +305,7 @@ small,
   height: 112px;
   object-fit: contain;
   border: 1px solid rgba(117, 217, 232, 0.17);
-  border-radius: 8px;
+  border-radius: 16px;
   background: rgba(4, 8, 13, 0.9);
   flex: 0 0 auto;
 }
@@ -299,22 +332,29 @@ small,
 }
 
 .primary-button,
-.icon-button {
+.icon-button,
+.ghost-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   min-height: 40px;
   border: 1px solid rgba(117, 217, 232, 0.3);
-  border-radius: 8px;
-  background: linear-gradient(180deg, rgba(117, 217, 232, 0.16), rgba(117, 217, 232, 0.07));
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(126, 210, 208, 0.18), rgba(126, 210, 208, 0.08));
   color: #edf6fb;
   text-decoration: none;
   cursor: pointer;
 }
 
-.primary-button {
+.primary-button,
+.ghost-button {
   padding: 0 14px;
+}
+
+.ghost-button {
+  border-color: rgba(174, 197, 207, 0.2);
+  background: rgba(255, 255, 255, 0.045);
 }
 
 .icon-button {
@@ -329,7 +369,7 @@ small,
 .metric-card {
   min-height: 96px;
   border: 1px solid rgba(137, 174, 193, 0.16);
-  border-radius: 8px;
+  border-radius: 16px;
   padding: 14px;
   background:
     linear-gradient(180deg, rgba(17, 29, 40, 0.96), rgba(8, 14, 21, 0.96));
@@ -382,7 +422,7 @@ small,
 .filters input {
   min-width: 0;
   border: 1px solid rgba(137, 174, 193, 0.18);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 9px 10px;
   background: rgba(4, 8, 13, 0.9);
   color: #edf6fb;
@@ -441,7 +481,7 @@ small,
 
 .state-banner {
   border: 1px solid rgba(137, 174, 193, 0.18);
-  border-radius: 8px;
+  border-radius: 14px;
   padding: 12px 14px;
   margin: 12px 0;
   color: #dce8ef;
@@ -467,7 +507,7 @@ small,
 
 .skeleton-grid span {
   height: 76px;
-  border-radius: 8px;
+  border-radius: 16px;
   background: linear-gradient(90deg, #0c1520, #142231, #0c1520);
   background-size: 200% 100%;
   animation: pulse 1.2s infinite;
@@ -488,7 +528,8 @@ small,
   min-width: 0;
 }
 
-.library-panel h2 {
+.library-panel h2,
+.settings-panel h2 {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -506,8 +547,11 @@ small,
   grid-template-columns: 1fr auto;
   gap: 8px;
   align-items: center;
-  border-bottom: 1px solid rgba(137, 174, 193, 0.08);
-  padding: 8px 0;
+  border: 1px solid rgba(137, 174, 193, 0.1);
+  border-radius: 16px;
+  padding: 10px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.025);
 }
 
 .library-item > button:first-child,
@@ -546,10 +590,37 @@ small,
   min-width: 0;
   width: 100%;
   border: 1px solid rgba(137, 174, 193, 0.18);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 7px 8px;
   background: rgba(4, 8, 13, 0.9);
   color: #edf6fb;
+}
+
+.settings-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.toggle-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(137, 174, 193, 0.12);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.toggle-row span {
+  display: grid;
+  gap: 3px;
+}
+
+.toggle-row input {
+  width: 44px;
+  height: 24px;
+  accent-color: var(--cyan);
 }
 
 @media (max-width: 980px) {
@@ -563,6 +634,10 @@ small,
 
   .top-band {
     grid-template-columns: 1fr;
+  }
+
+  .top-actions {
+    justify-content: flex-start;
   }
 }
 
@@ -582,6 +657,10 @@ small,
 
   .skeleton-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .menu-grid {
+    grid-template-columns: 1fr;
   }
 
   .actions {

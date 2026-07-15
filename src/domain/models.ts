@@ -72,8 +72,8 @@ export type FavoriteSnapshot = {
   thumbUrl: string | null;
   lastPrice: number | null;
   previousPrice: number | null;
-  alertDropPercent: number | null;
-  alertRisePercent: number | null;
+  alertDropPrice: number | null;
+  alertRisePrice: number | null;
   lastAlertAt: string | null;
   updatedAt: string;
 };

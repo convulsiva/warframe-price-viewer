@@ -1,6 +1,6 @@
 {
   "name": "warframe-price-viewer",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Warframe market price viewer",
   "scripts": {
     "dev": "vite --host 127.0.0.1",

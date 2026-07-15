@@ -68,7 +68,7 @@ export function ItemSearch({ items, loading, onSelect }: ItemSearchProps) {
           aria-expanded={shouldShowResults && results.length > 0}
           aria-controls="item-results"
           aria-activedescendant={results[activeIndex] ? `item-result-${results[activeIndex].slug}` : undefined}
-          placeholder="Search by English or localized item name"
+          placeholder="Search item name"
           autoComplete="off"
         />
       </div>
