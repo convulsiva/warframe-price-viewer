@@ -4532,9 +4532,10 @@ dependencies = [
 
 [[package]]
 name = "warframe-price-viewer"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "arboard",
+ "notify-rust",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
