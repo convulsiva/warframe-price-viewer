@@ -74,6 +74,7 @@ export type FavoriteSnapshot = {
   previousPrice: number | null;
   alertDropPrice: number | null;
   alertRisePrice: number | null;
+  alertedOrderKeys: string[];
   lastAlertAt: string | null;
   updatedAt: string;
 };

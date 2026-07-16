@@ -9,60 +9,113 @@ import { listenForNotificationActions, sendDesktopNotification } from "../../lib
 import { useLibraryStore } from "./store";
 
 const PRICE_ALERT_ACTION_TYPE = "price-alert-actions";
+const MAX_ALERTS_PER_FAVORITE_CHECK = 5;
 
-export function lowestIngameSellOrder(orders: MarketOrder[]): MarketOrder | null {
-  const sellers = sortOrders(
-    orders.filter((order) => order.visible && order.type === "sell" && order.user?.status === "ingame")
-  );
-  return sellers[0] ?? null;
+type PriceAlertNotification = {
+  title: string;
+  body: string;
+  command: string;
+  key: string;
+};
+
+type PriceAlertResult = {
+  notifications: PriceAlertNotification[];
+  activeKeys: string[];
+};
+
+export function ingameSellOrders(orders: MarketOrder[]): MarketOrder[] {
+  return sortOrders(orders.filter((order) => order.visible && order.type === "sell" && order.user?.status === "ingame"));
 }
 
-export function lowestIngameSellPrice(orders: MarketOrder[]): number | null {
-  return lowestIngameSellOrder(orders)?.platinum ?? null;
+export function lowestIngameSellOrder(orders: MarketOrder[]): MarketOrder | null {
+  return ingameSellOrders(orders)[0] ?? null;
 }
 
 export function whisperCommand(itemName: string, sellerName: string, price: number): string {
   return `/w ${sellerName} Hi! I want to buy: "${itemName}" for ${price} platinum. (warframe.market)`;
 }
 
-function shouldSendDropAlert(favorite: FavoriteSnapshot, nextPrice: number): boolean {
-  if (favorite.alertDropPrice === null || nextPrice > favorite.alertDropPrice) return false;
-  if (favorite.lastPrice === null) return true;
-  return favorite.lastPrice > favorite.alertDropPrice || nextPrice < favorite.lastPrice;
+export function lowestIngameSellPrice(orders: MarketOrder[]): number | null {
+  return lowestIngameSellOrder(orders)?.platinum ?? null;
 }
 
-function shouldSendRiseAlert(favorite: FavoriteSnapshot, nextPrice: number): boolean {
-  if (favorite.alertRisePrice === null || nextPrice < favorite.alertRisePrice) return false;
-  if (favorite.lastPrice === null) return true;
-  return favorite.lastPrice < favorite.alertRisePrice || nextPrice > favorite.lastPrice;
+function sellerKey(order: MarketOrder): string {
+  return order.user?.id || order.user?.name || order.id;
 }
 
-function alertForFavorite(
+function priceAlertKey(favorite: FavoriteSnapshot, direction: "drop" | "rise", order: MarketOrder): string {
+  return `${favorite.slug}:${direction}:${sellerKey(order)}:${order.platinum}`;
+}
+
+function shouldSendDropAlertForOrder(favorite: FavoriteSnapshot, order: MarketOrder): boolean {
+  if (favorite.alertDropPrice === null || order.platinum > favorite.alertDropPrice) return false;
+  if (favorite.lastPrice === null) return true;
+  return favorite.lastPrice > favorite.alertDropPrice || order.platinum < favorite.lastPrice;
+}
+
+function shouldSendRiseAlertForOrder(favorite: FavoriteSnapshot, order: MarketOrder): boolean {
+  if (favorite.alertRisePrice === null || order.platinum < favorite.alertRisePrice) return false;
+  if (favorite.lastPrice === null) return true;
+  return favorite.lastPrice < favorite.alertRisePrice || order.platinum > favorite.lastPrice;
+}
+
+export function alertsForFavorite(
   favorite: FavoriteSnapshot,
-  order: MarketOrder | null
-): { title: string; body: string; command: string } | null {
-  if (!order || !order.user) return null;
+  orders: MarketOrder[]
+): PriceAlertResult {
+  const alreadyAlerted = new Set(favorite.alertedOrderKeys ?? []);
+  const currentlyMatching = new Set<string>();
+  const notifications: PriceAlertNotification[] = [];
 
-  const nextPrice = order.platinum;
-  const seller = order.user.name;
+  for (const order of ingameSellOrders(orders)) {
+    if (!order.user) continue;
 
-  if (shouldSendDropAlert(favorite, nextPrice)) {
-    return {
-      title: `${favorite.name} price dropped`,
-      body: `${seller} sells for ${formatPlatinum(nextPrice)}. Click to copy whisper.`,
-      command: whisperCommand(favorite.name, seller, nextPrice)
-    };
+    if (favorite.alertDropPrice !== null && order.platinum <= favorite.alertDropPrice) {
+      currentlyMatching.add(priceAlertKey(favorite, "drop", order));
+    }
+
+    if (favorite.alertRisePrice !== null && order.platinum >= favorite.alertRisePrice) {
+      currentlyMatching.add(priceAlertKey(favorite, "rise", order));
+    }
+
+    if (shouldSendDropAlertForOrder(favorite, order)) {
+      const key = priceAlertKey(favorite, "drop", order);
+      if (!alreadyAlerted.has(key)) {
+        notifications.push({
+          title: `${favorite.name} price dropped`,
+          body: `${order.user.name} sells for ${formatPlatinum(order.platinum)}. Click to copy whisper.`,
+          command: whisperCommand(favorite.name, order.user.name, order.platinum),
+          key
+        });
+        alreadyAlerted.add(key);
+      }
+    }
+
+    if (shouldSendRiseAlertForOrder(favorite, order)) {
+      const key = priceAlertKey(favorite, "rise", order);
+      if (!alreadyAlerted.has(key)) {
+        notifications.push({
+          title: `${favorite.name} price increased`,
+          body: `${order.user.name} sells for ${formatPlatinum(order.platinum)}. Click to copy whisper.`,
+          command: whisperCommand(favorite.name, order.user.name, order.platinum),
+          key
+        });
+        alreadyAlerted.add(key);
+      }
+    }
+
+    if (notifications.length >= MAX_ALERTS_PER_FAVORITE_CHECK) break;
   }
 
-  if (shouldSendRiseAlert(favorite, nextPrice)) {
-    return {
-      title: `${favorite.name} price increased`,
-      body: `Lowest ingame seller is now ${formatPlatinum(nextPrice)}. Click to copy whisper.`,
-      command: whisperCommand(favorite.name, seller, nextPrice)
-    };
-  }
-
-  return null;
+  return {
+    notifications,
+    activeKeys: [
+      ...new Set([
+        ...(favorite.alertedOrderKeys ?? []).filter((key) => currentlyMatching.has(key)),
+        ...notifications.map((notification) => notification.key)
+      ])
+    ].slice(-120)
+  };
 }
 
 export function useFavoritePriceAlerts(favorites: FavoriteSnapshot[], online: boolean) {
@@ -112,8 +165,9 @@ export function useFavoritePriceAlerts(favorites: FavoriteSnapshot[], online: bo
         if (cancelled) return;
         const order = lowestIngameSellOrder(orders);
         const nextPrice = order?.platinum ?? null;
-        const notification = alertForFavorite(favorite, order);
-        if (notification) {
+        const alertResult = alertsForFavorite(favorite, orders);
+        const notifications = alertResult.notifications;
+        for (const notification of notifications) {
           await sendDesktopNotification({
             title: notification.title,
             body: notification.body,
@@ -121,7 +175,12 @@ export function useFavoritePriceAlerts(favorites: FavoriteSnapshot[], online: bo
             extra: { whisperCommand: notification.command }
           });
         }
-        updateFavoritePrice(favorite.slug, nextPrice, Boolean(notification));
+        updateFavoritePrice(
+          favorite.slug,
+          nextPrice,
+          notifications.length > 0,
+          alertResult.activeKeys
+        );
       } catch {
         // Background checks should stay quiet; the active item panel shows API errors.
       } finally {
