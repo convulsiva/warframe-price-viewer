@@ -94,6 +94,13 @@ h1 {
   line-height: 1;
 }
 
+.creator-mark {
+  margin: 8px 0 0;
+  color: rgba(216, 246, 251, 0.72);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
 h2 {
   margin-bottom: 10px;
   font-size: 1.28rem;
@@ -361,6 +368,16 @@ small,
   width: 40px;
 }
 
+.icon-button.is-refetching svg {
+  animation: refresh-spin 0.9s linear infinite;
+}
+
+@keyframes refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .metrics {
   grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
   margin: 18px 0;
@@ -447,14 +464,14 @@ small,
 
 .order-row {
   display: grid;
-  grid-template-columns: 78px minmax(90px, 1fr) 78px 46px 46px minmax(120px, 1fr);
+  grid-template-columns: 78px minmax(150px, 1fr) 78px 46px 46px minmax(120px, 1fr);
   gap: 10px;
   align-items: center;
   min-height: 42px;
   border-bottom: 1px solid rgba(137, 174, 193, 0.08);
   color: #cbd8e3;
   font-size: 0.85rem;
-  min-width: 560px;
+  min-width: 640px;
 }
 
 .order-row.head {
@@ -465,6 +482,38 @@ small,
 
 .status-dot {
   text-transform: capitalize;
+}
+
+.seller-cell {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.seller-cell > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copy-whisper-button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid rgba(119, 217, 232, 0.28);
+  border-radius: 999px;
+  padding: 5px 8px;
+  background: rgba(119, 217, 232, 0.08);
+  color: #d8f6fb;
+  font-size: 0.72rem;
+}
+
+.copy-whisper-button:hover {
+  border-color: rgba(119, 217, 232, 0.52);
+  background: rgba(119, 217, 232, 0.14);
 }
 
 .status-dot.ingame {

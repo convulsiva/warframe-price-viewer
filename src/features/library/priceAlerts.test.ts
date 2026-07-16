@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { MarketOrder } from "../../domain/models";
-import { lowestIngameSellPrice, whisperCommand } from "./priceAlerts";
+import type { FavoriteSnapshot, MarketOrder } from "../../domain/models";
+import { alertsForFavorite, lowestIngameSellPrice, whisperCommand } from "./priceAlerts";
 
 const baseUser = {
   id: "user",
@@ -31,6 +31,22 @@ function order(overrides: Partial<MarketOrder>): MarketOrder {
   };
 }
 
+function favorite(overrides: Partial<FavoriteSnapshot> = {}): FavoriteSnapshot {
+  return {
+    slug: "lex_prime_set",
+    name: "Lex Prime Set",
+    thumbUrl: null,
+    lastPrice: 10,
+    previousPrice: 12,
+    alertDropPrice: 7,
+    alertRisePrice: null,
+    alertedOrderKeys: [],
+    lastAlertAt: null,
+    updatedAt: "2026-07-16T00:00:00.000Z",
+    ...overrides
+  };
+}
+
 describe("price alerts", () => {
   it("uses only visible ingame sell orders for alert pricing", () => {
     expect(
@@ -48,5 +64,43 @@ describe("price alerts", () => {
     expect(whisperCommand("Lex Prime Set", "Seller", 5)).toBe(
       '/w Seller Hi! I want to buy: "Lex Prime Set" for 5 platinum. (warframe.market)'
     );
+  });
+
+  it("creates separate drop alerts for multiple new matching ingame sellers", () => {
+    const result = alertsForFavorite(favorite(), [
+      order({ id: "seller-a", platinum: 5, user: { ...baseUser, id: "a", name: "SellerA" } }),
+      order({ id: "seller-b", platinum: 6, user: { ...baseUser, id: "b", name: "SellerB" } }),
+      order({ id: "seller-c", platinum: 8, user: { ...baseUser, id: "c", name: "SellerC" } })
+    ]);
+
+    expect(result.notifications.map((alert) => alert.command)).toEqual([
+      '/w SellerA Hi! I want to buy: "Lex Prime Set" for 5 platinum. (warframe.market)',
+      '/w SellerB Hi! I want to buy: "Lex Prime Set" for 6 platinum. (warframe.market)'
+    ]);
+    expect(result.activeKeys).toEqual(["lex_prime_set:drop:a:5", "lex_prime_set:drop:b:6"]);
+  });
+
+  it("does not repeat an alert for the same seller, direction, and price", () => {
+    const result = alertsForFavorite(
+      favorite({ alertedOrderKeys: ["lex_prime_set:drop:a:5"] }),
+      [
+        order({ id: "seller-a", platinum: 5, user: { ...baseUser, id: "a", name: "SellerA" } }),
+        order({ id: "seller-b", platinum: 6, user: { ...baseUser, id: "b", name: "SellerB" } })
+      ]
+    );
+
+    expect(result.notifications.map((alert) => alert.command)).toEqual([
+      '/w SellerB Hi! I want to buy: "Lex Prime Set" for 6 platinum. (warframe.market)'
+    ]);
+    expect(result.activeKeys).toEqual(["lex_prime_set:drop:a:5", "lex_prime_set:drop:b:6"]);
+  });
+
+  it("drops inactive alert keys so the same seller can alert again after leaving the target", () => {
+    const result = alertsForFavorite(favorite({ alertedOrderKeys: ["lex_prime_set:drop:a:5"] }), [
+      order({ id: "seller-a", platinum: 8, user: { ...baseUser, id: "a", name: "SellerA" } })
+    ]);
+
+    expect(result.notifications).toEqual([]);
+    expect(result.activeKeys).toEqual([]);
   });
 });

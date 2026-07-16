@@ -84,6 +84,7 @@ export function App() {
         <div>
           <p className="eyebrow">Warframe market scanner</p>
           <h1>Price console</h1>
+          <p className="creator-mark">created by convulsiva &lt;3</p>
         </div>
         <div className="top-actions">
           <button type="button" className="ghost-button" onClick={goHome}>
@@ -130,8 +131,8 @@ export function App() {
                   </button>
                   <button
                     type="button"
-                    className="icon-button"
-                    aria-label="Refresh orders"
+                    className={isRefetching ? "icon-button is-refetching" : "icon-button"}
+                    aria-label={isRefetching ? "Refreshing orders" : "Refresh orders"}
                     onClick={() => {
                       void topOrdersQuery.refetch();
                       void ordersQuery.refetch();
@@ -166,7 +167,6 @@ export function App() {
                 <span>Auto-refresh: every 5s</span>
                 <span>Default: online sellers, lowest price first</span>
                 <span>Cross Play and platform are filterable when present</span>
-                {isRefetching && <span>Refreshing...</span>}
                 {hasCachedOrders && <span>Using cached data</span>}
               </div>
 
@@ -179,8 +179,8 @@ export function App() {
 
               <OrderFilters orders={orders} filters={filters} onChange={setFilters} />
               <div className="orders-grid">
-                {filters.type !== "buy" && <OrderList title={`Best sellers (${sells.length})`} orders={sells} />}
-                {filters.type !== "sell" && <OrderList title={`Best buyers (${buys.length})`} orders={buys} />}
+                {filters.type !== "buy" && <OrderList title={`Best sellers (${sells.length})`} orders={sells} itemName={item.name} />}
+                {filters.type !== "sell" && <OrderList title={`Best buyers (${buys.length})`} orders={buys} itemName={item.name} />}
               </div>
             </section>
           )}

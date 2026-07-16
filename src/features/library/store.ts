@@ -9,7 +9,7 @@ type LibraryState = {
   removeFavorite: (slug: string) => void;
   isFavorite: (slug: string) => boolean;
   updateFavoriteAlert: (slug: string, direction: "drop" | "rise", price: number | null) => void;
-  updateFavoritePrice: (slug: string, price: number | null, alerted?: boolean) => void;
+  updateFavoritePrice: (slug: string, price: number | null, alerted?: boolean, alertedOrderKeys?: string[]) => void;
   addRecent: (item: MarketItem) => void;
   removeRecent: (slug: string) => void;
   clearRecents: () => void;
@@ -31,6 +31,7 @@ export const useLibraryStore = create<LibraryState>()(
           previousPrice: existing?.lastPrice ?? null,
           alertDropPrice: existing?.alertDropPrice ?? null,
           alertRisePrice: existing?.alertRisePrice ?? null,
+          alertedOrderKeys: existing?.alertedOrderKeys ?? [],
           lastAlertAt: existing?.lastAlertAt ?? null,
           updatedAt: new Date().toISOString()
         };
@@ -53,7 +54,7 @@ export const useLibraryStore = create<LibraryState>()(
               : favorite
           )
         })),
-      updateFavoritePrice: (slug, price, alerted = false) =>
+      updateFavoritePrice: (slug, price, alerted = false, alertedOrderKeys) =>
         set((state) => ({
           favorites: state.favorites.map((favorite) =>
             favorite.slug === slug
@@ -61,6 +62,7 @@ export const useLibraryStore = create<LibraryState>()(
                   ...favorite,
                   previousPrice: favorite.lastPrice,
                   lastPrice: price,
+                  alertedOrderKeys: alertedOrderKeys ?? favorite.alertedOrderKeys ?? [],
                   lastAlertAt: alerted ? new Date().toISOString() : favorite.lastAlertAt,
                   updatedAt: new Date().toISOString()
                 }
@@ -95,6 +97,7 @@ export const useLibraryStore = create<LibraryState>()(
               ...favorite,
               alertDropPrice: favorite.alertDropPrice ?? null,
               alertRisePrice: favorite.alertRisePrice ?? null,
+              alertedOrderKeys: favorite.alertedOrderKeys ?? [],
               lastAlertAt: favorite.lastAlertAt ?? null
             })) ?? []
         };
