@@ -1348,7 +1348,8 @@ html[data-theme="light"] .ghost-button {
 .favorites-modal {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
-  width: min(920px, 100%);
+  width: min(920px, calc(100vw - 48px));
+  max-width: calc(100vw - 48px);
   max-height: min(760px, calc(100vh - 44px));
   border: 1px solid rgba(139, 177, 186, 0.18);
   border-radius: var(--radius-lg);
@@ -1377,7 +1378,7 @@ html[data-theme="light"] .ghost-button {
 
 .favorites-toolbar {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) 150px 190px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   border-bottom: 1px solid rgba(139, 177, 186, 0.1);
   padding: 12px 18px;
@@ -1385,6 +1386,7 @@ html[data-theme="light"] .ghost-button {
 
 .favorites-toolbar label {
   display: grid;
+  min-width: 0;
   gap: 5px;
   color: var(--text-muted);
   font-size: 0.68rem;
@@ -1401,11 +1403,20 @@ html[data-theme="light"] .ghost-button {
 }
 
 .favorites-toolbar select {
+  width: 100%;
+  min-width: 0;
   padding: 0 10px;
+}
+
+.favorites-toolbar-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 150px) minmax(0, 190px);
+  gap: 10px;
 }
 
 .favorites-search {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: 9px;
   padding: 0 10px;
@@ -1425,17 +1436,17 @@ html[data-theme="light"] .ghost-button {
   align-content: start;
   gap: 6px;
   overflow: auto;
+  overflow-x: hidden;
   padding: 12px 18px 18px;
 }
 
 .favorite-row {
   display: grid;
-  grid-template-columns: minmax(190px, 1.25fr) 92px 86px 126px auto;
-  align-items: center;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
   border: 1px solid rgba(139, 177, 186, 0.1);
   border-radius: var(--radius-md);
-  padding: 8px;
+  padding: 9px 10px;
   background: rgba(255, 255, 255, 0.024);
   transition:
     background var(--transition),
@@ -1462,8 +1473,8 @@ html[data-theme="light"] .ghost-button {
 }
 
 .favorite-row-main img {
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
   border: 1px solid rgba(139, 177, 186, 0.12);
   border-radius: 9px;
   background: rgba(5, 12, 16, 0.72);
@@ -1479,10 +1490,27 @@ html[data-theme="light"] .ghost-button {
   white-space: nowrap;
 }
 
+.favorite-row-details {
+  display: grid;
+  grid-template-columns: minmax(82px, auto) minmax(108px, 1fr) auto;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  padding-left: 47px;
+}
+
 .favorite-row-price {
   color: var(--gold);
   font-size: 0.86rem;
   font-weight: 760;
+  white-space: nowrap;
+}
+
+.favorite-row-price small {
+  margin-left: 3px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
 }
 
 .favorite-row-delta {
@@ -1722,17 +1750,40 @@ html[data-theme="light"] .order-table {
   background: rgba(255, 255, 255, 0.54);
 }
 
-html[data-theme="light"] th {
+html[data-theme="light"] .order-row {
+  color: #334f59;
+}
+
+html[data-theme="light"] .order-row.head {
   color: #455f6a;
 }
 
-html[data-theme="light"] tr:hover td {
+html[data-theme="light"] .seller-cell > span {
+  color: #17272d;
+}
+
+html[data-theme="light"] .order-row > span:nth-child(4),
+html[data-theme="light"] .order-row > span:nth-child(5),
+html[data-theme="light"] .order-row > span:nth-child(6) {
+  color: #405c67;
+}
+
+html[data-theme="light"] .status-dot.ingame {
+  color: #0f7378;
+}
+
+html[data-theme="light"] .order-row:hover:not(.head) {
   background: rgba(21, 127, 132, 0.055);
 }
 
 html[data-theme="light"] .copy-whisper-button,
 html[data-theme="light"] .row-settings-button {
   background: rgba(255, 255, 255, 0.56);
+}
+
+html[data-theme="light"] .copy-whisper-button,
+html[data-theme="light"] .row-settings-button {
+  color: #17272d;
 }
 
 html[data-theme="light"] .proxy-settings {
@@ -1790,6 +1841,12 @@ html[data-theme="light"] .toggle-row input::before {
 
 html[data-theme="light"] .toggle-row input:checked::before {
   background: var(--cyan);
+}
+
+@media (max-width: 980px) {
+  .favorite-row-details {
+    grid-template-columns: minmax(82px, auto) minmax(108px, 1fr) auto;
+  }
 }
 
 @media (max-width: 1100px) {
@@ -1860,19 +1917,18 @@ html[data-theme="light"] .toggle-row input:checked::before {
     grid-template-columns: 1fr;
   }
 
-  .favorite-row {
-    grid-template-columns: minmax(0, 1fr) auto;
+  .favorites-toolbar-controls {
+    grid-template-columns: 1fr 1fr;
   }
 
-  .favorite-row-price,
-  .favorite-row-delta,
-  .alert-status,
-  .favorite-row-actions {
-    justify-self: start;
+  .favorite-row-details {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-left: 47px;
   }
 
   .favorite-row-actions {
     grid-column: 1 / -1;
+    justify-content: flex-start;
   }
 }
 
@@ -1889,5 +1945,14 @@ html[data-theme="light"] .toggle-row input:checked::before {
   .market-view,
   .initial-state {
     padding: 12px;
+  }
+
+  .favorites-toolbar-controls,
+  .favorite-row-details {
+    grid-template-columns: 1fr;
+  }
+
+  .favorite-row-details {
+    padding-left: 0;
   }
 }

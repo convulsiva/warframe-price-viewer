@@ -1,5 +1,6 @@
 import { ChevronDown, Search, SlidersHorizontal, Star, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import type { FavoriteSnapshot, MarketItem } from "../../domain/models";
 import { formatPlatinum } from "../../lib/format";
 import { useLibraryStore } from "./store";
@@ -26,71 +27,75 @@ export function LibraryPanel({ onOpen }: Props) {
   const previewFavorites = favorites.slice(0, FAVORITE_PREVIEW_LIMIT);
 
   return (
-    <aside className="library-panel">
-      <section>
-        <div className="section-title-row">
-          <h2>
-            <Star size={18} aria-hidden="true" /> Favorites
-          </h2>
-          {favorites.length > FAVORITE_PREVIEW_LIMIT && <span className="section-count">{favorites.length}</span>}
-        </div>
-        {favorites.length === 0 && <p className="empty-copy">Saved items will appear here.</p>}
-        {previewFavorites.map((favorite) => (
-          <FavoriteCard
-            favorite={favorite}
-            key={favorite.slug}
-            onOpen={onOpen}
-            onRemove={removeFavorite}
-            onUpdateAlert={updateFavoriteAlert}
-          />
-        ))}
-        {favorites.length > FAVORITE_PREVIEW_LIMIT && (
-          <button className="view-all-button" type="button" onClick={() => setIsFavoritesOpen(true)}>
-            View all
-            <span>{favorites.length - FAVORITE_PREVIEW_LIMIT} more</span>
-          </button>
-        )}
-      </section>
-      <section>
-        <div className="section-title-row">
-          <h2>Recent</h2>
-          {recents.length > 0 && (
-            <button className="icon-button" type="button" aria-label="Clear recent items" onClick={clearRecents}>
-              <Trash2 size={16} aria-hidden="true" />
+    <>
+      <aside className="library-panel">
+        <section>
+          <div className="section-title-row">
+            <h2>
+              <Star size={18} aria-hidden="true" /> Favorites
+            </h2>
+            {favorites.length > FAVORITE_PREVIEW_LIMIT && <span className="section-count">{favorites.length}</span>}
+          </div>
+          {favorites.length === 0 && <p className="empty-copy">Saved items will appear here.</p>}
+          {previewFavorites.map((favorite) => (
+            <FavoriteCard
+              favorite={favorite}
+              key={favorite.slug}
+              onOpen={onOpen}
+              onRemove={removeFavorite}
+              onUpdateAlert={updateFavoriteAlert}
+            />
+          ))}
+          {favorites.length > FAVORITE_PREVIEW_LIMIT && (
+            <button className="view-all-button" type="button" onClick={() => setIsFavoritesOpen(true)}>
+              View all
+              <span>{favorites.length - FAVORITE_PREVIEW_LIMIT} more</span>
             </button>
           )}
-        </div>
-        {recents.length === 0 && <p className="empty-copy">Viewed items will appear here.</p>}
-        {recents.map((recent) => (
-          <div className="library-item" key={recent.slug}>
-            <button type="button" onClick={() => onOpen(recent.slug)}>
-              {recent.thumbUrl && <img src={recent.thumbUrl} alt="" />}
-              <span>
-                <strong>{recent.name}</strong>
-                <small>{new Date(recent.viewedAt).toLocaleString()}</small>
-              </span>
-            </button>
-            <button className="icon-button" type="button" aria-label={`Remove ${recent.name}`} onClick={() => removeRecent(recent.slug)}>
-              <X size={16} aria-hidden="true" />
-            </button>
+        </section>
+        <section>
+          <div className="section-title-row">
+            <h2>Recent</h2>
+            {recents.length > 0 && (
+              <button className="icon-button" type="button" aria-label="Clear recent items" onClick={clearRecents}>
+                <Trash2 size={16} aria-hidden="true" />
+              </button>
+            )}
           </div>
-        ))}
-      </section>
-      {isFavoritesOpen && (
-        <FavoritesDialog
-          favorites={favorites}
-          expandedFavorite={expandedFavorite}
-          onClose={() => setIsFavoritesOpen(false)}
-          onOpenItem={(slug) => {
-            onOpen(slug);
-            setIsFavoritesOpen(false);
-          }}
-          onRemove={removeFavorite}
-          onToggleExpanded={(slug) => setExpandedFavorite((current) => (current === slug ? null : slug))}
-          onUpdateAlert={updateFavoriteAlert}
-        />
-      )}
-    </aside>
+          {recents.length === 0 && <p className="empty-copy">Viewed items will appear here.</p>}
+          {recents.map((recent) => (
+            <div className="library-item" key={recent.slug}>
+              <button type="button" onClick={() => onOpen(recent.slug)}>
+                {recent.thumbUrl && <img src={recent.thumbUrl} alt="" />}
+                <span>
+                  <strong>{recent.name}</strong>
+                  <small>{new Date(recent.viewedAt).toLocaleString()}</small>
+                </span>
+              </button>
+              <button className="icon-button" type="button" aria-label={`Remove ${recent.name}`} onClick={() => removeRecent(recent.slug)}>
+                <X size={16} aria-hidden="true" />
+              </button>
+            </div>
+          ))}
+        </section>
+      </aside>
+      {isFavoritesOpen &&
+        createPortal(
+          <FavoritesDialog
+            favorites={favorites}
+            expandedFavorite={expandedFavorite}
+            onClose={() => setIsFavoritesOpen(false)}
+            onOpenItem={(slug) => {
+              onOpen(slug);
+              setIsFavoritesOpen(false);
+            }}
+            onRemove={removeFavorite}
+            onToggleExpanded={(slug) => setExpandedFavorite((current) => (current === slug ? null : slug))}
+            onUpdateAlert={updateFavoriteAlert}
+          />,
+          document.body
+        )}
+    </>
   );
 }
 
@@ -156,22 +161,24 @@ function FavoritesDialog({
             <Search size={16} aria-hidden="true" />
             <input value={query} placeholder="Search saved items" onChange={(event) => setQuery(event.target.value)} />
           </label>
-          <label>
-            <span>Sort</span>
-            <select value={sort} onChange={(event) => setSort(event.target.value as FavoriteSort)}>
-              <option value="added">Time added</option>
-              <option value="name">Name</option>
-              <option value="price">Price</option>
-            </select>
-          </label>
-          <label>
-            <span>Filter</span>
-            <select value={filter} onChange={(event) => setFilter(event.target.value as FavoriteFilter)}>
-              <option value="all">All</option>
-              <option value="alerts-enabled">Alerts enabled</option>
-              <option value="alerts-disabled">Alerts disabled</option>
-            </select>
-          </label>
+          <div className="favorites-toolbar-controls">
+            <label>
+              <span>Sort</span>
+              <select value={sort} onChange={(event) => setSort(event.target.value as FavoriteSort)}>
+                <option value="added">Time added</option>
+                <option value="name">Name</option>
+                <option value="price">Price</option>
+              </select>
+            </label>
+            <label>
+              <span>Filter</span>
+              <select value={filter} onChange={(event) => setFilter(event.target.value as FavoriteFilter)}>
+                <option value="all">All</option>
+                <option value="alerts-enabled">Alerts enabled</option>
+                <option value="alerts-disabled">Alerts disabled</option>
+              </select>
+            </label>
+          </div>
         </div>
 
         <div className="favorites-list" aria-live="polite">
@@ -204,7 +211,7 @@ function FavoriteCard({
   onRemove: (slug: string) => void;
   onUpdateAlert: (slug: string, direction: "drop" | "rise", price: number | null) => void;
 }) {
-  const delta = priceDelta(favorite);
+  const targetPrice = favoriteTargetPrice(favorite);
 
   return (
     <div className="library-item" key={favorite.slug}>
@@ -214,8 +221,7 @@ function FavoriteCard({
           <span>
             <strong>{favorite.name}</strong>
             <small>
-              {formatPlatinum(favorite.lastPrice)}
-              {delta !== null ? ` (${delta >= 0 ? "+" : ""}${delta})` : ""}
+              {formatPlatinum(favorite.lastPrice)} ({targetPrice})
             </small>
           </span>
         </button>
@@ -243,8 +249,8 @@ function FavoriteRow({
   onToggleExpanded: (slug: string) => void;
   onUpdateAlert: (slug: string, direction: "drop" | "rise", price: number | null) => void;
 }) {
-  const delta = priceDelta(favorite);
   const alertsEnabled = favorite.alertDropPrice !== null || favorite.alertRisePrice !== null;
+  const targetPrice = favoriteTargetPrice(favorite);
 
   return (
     <article className={expanded ? "favorite-row is-expanded" : "favorite-row"}>
@@ -252,20 +258,21 @@ function FavoriteRow({
         {favorite.thumbUrl && <img src={favorite.thumbUrl} alt="" />}
         <span className="favorite-row-name">{favorite.name}</span>
       </button>
-      <span className="favorite-row-price">{formatPlatinum(favorite.lastPrice)}</span>
-      <span className={delta !== null && delta < 0 ? "favorite-row-delta is-down" : "favorite-row-delta"}>
-        {delta !== null ? `${delta >= 0 ? "+" : ""}${delta}` : "No change"}
-      </span>
-      <span className={alertsEnabled ? "alert-status is-on" : "alert-status"}>{alertsEnabled ? "Alerts enabled" : "Alerts disabled"}</span>
-      <div className="favorite-row-actions">
-        <button className="row-settings-button" type="button" onClick={() => onToggleExpanded(favorite.slug)}>
-          <SlidersHorizontal size={14} aria-hidden="true" />
-          Alerts
-          <ChevronDown size={14} aria-hidden="true" />
-        </button>
-        <button className="icon-button" type="button" aria-label={`Remove ${favorite.name}`} onClick={() => onRemove(favorite.slug)}>
-          <X size={16} aria-hidden="true" />
-        </button>
+      <div className="favorite-row-details">
+        <span className="favorite-row-price">
+          {formatPlatinum(favorite.lastPrice)} <small>({targetPrice})</small>
+        </span>
+        <span className={alertsEnabled ? "alert-status is-on" : "alert-status"}>{alertsEnabled ? "Alerts enabled" : "Alerts disabled"}</span>
+        <div className="favorite-row-actions">
+          <button className="row-settings-button" type="button" onClick={() => onToggleExpanded(favorite.slug)}>
+            <SlidersHorizontal size={14} aria-hidden="true" />
+            Alerts
+            <ChevronDown size={14} aria-hidden="true" />
+          </button>
+          <button className="icon-button" type="button" aria-label={`Remove ${favorite.name}`} onClick={() => onRemove(favorite.slug)}>
+            <X size={16} aria-hidden="true" />
+          </button>
+        </div>
       </div>
       {expanded && (
         <div className="favorite-row-alerts">
@@ -317,8 +324,8 @@ function AlertInputs({
   );
 }
 
-function priceDelta(favorite: FavoriteSnapshot): number | null {
-  return favorite.lastPrice !== null && favorite.previousPrice !== null ? favorite.lastPrice - favorite.previousPrice : null;
+function favoriteTargetPrice(favorite: FavoriteSnapshot): number {
+  return favorite.alertDropPrice ?? favorite.alertRisePrice ?? 0;
 }
 
 function priceForSort(favorite: FavoriteSnapshot): number {
