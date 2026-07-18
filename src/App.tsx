@@ -12,6 +12,8 @@ import { OrderFilters } from "./features/market/OrderFilters";
 import { OrderList } from "./features/market/OrderList";
 import { ItemSearch } from "./features/search/ItemSearch";
 import { SettingsMenu } from "./features/settings/SettingsPanel";
+import { UpdateDialog } from "./features/settings/UpdateDialog";
+import { useAppUpdater } from "./features/settings/useAppUpdater";
 import { useCloseToTray } from "./features/settings/useCloseToTray";
 import { useTheme } from "./features/settings/useTheme";
 import { formatPercent, formatPlatinum, formatRelative } from "./lib/format";
@@ -20,6 +22,7 @@ import { openExternalUrl } from "./lib/openExternal";
 
 export function App() {
   const online = useOnlineStatus();
+  const updater = useAppUpdater();
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [filters, setFilters] = useState(defaultFilters);
   const itemsQuery = useItemsQuery();
@@ -89,7 +92,7 @@ export function App() {
           <h1>Price console</h1>
         </div>
         <div className="top-actions">
-          <SettingsMenu />
+          <SettingsMenu updater={updater} />
           <button type="button" className="ghost-button" onClick={goHome}>
             <Home size={17} aria-hidden="true" />
             Home
@@ -191,6 +194,7 @@ export function App() {
         <LibraryPanel onOpen={openSlug} selected={item ?? null} />
       </div>
       <p className="creator-mark">created by convulsiva &lt;3</p>
+      <UpdateDialog updater={updater} />
     </main>
   );
 }

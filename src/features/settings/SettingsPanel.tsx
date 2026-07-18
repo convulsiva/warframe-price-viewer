@@ -1,7 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Minimize2 } from "lucide-react";
+import { Download, Minimize2, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { useSettingsStore } from "./store";
+import type { AppUpdater } from "./useAppUpdater";
 
 type ProxyTestState = "idle" | "testing" | "success" | "error";
 
@@ -30,7 +31,7 @@ export function SettingsPanel() {
   );
 }
 
-export function SettingsMenu() {
+export function SettingsMenu({ updater }: { updater: AppUpdater }) {
   const closeToTray = useSettingsStore((state) => state.closeToTray);
   const setCloseToTray = useSettingsStore((state) => state.setCloseToTray);
   const theme = useSettingsStore((state) => state.theme);
@@ -53,8 +54,42 @@ export function SettingsMenu() {
         </label>
         <ThemeToggle enabled={theme === "light"} onChange={(enabled) => setTheme(enabled ? "light" : "dark")} />
         <ProxySettings settings={proxySettings} />
+        <UpdaterSettings updater={updater} />
       </div>
     </details>
+  );
+}
+
+function UpdaterSettings({ updater }: { updater: AppUpdater }) {
+  const checking = updater.status === "checking";
+  const available = updater.status === "available" || updater.status === "downloading" || updater.status === "installing";
+  const message = available
+    ? `Version ${updater.updateVersion} is ready.`
+    : updater.status === "current"
+      ? "You have the latest version."
+      : updater.status === "error"
+        ? updater.errorMessage
+        : "Updates are checked automatically.";
+
+  return (
+    <div className="updater-settings">
+      <div className="updater-settings-copy">
+        <span>
+          <strong>Updates</strong>
+          <small>Current version: {updater.currentVersion || "Checking..."}</small>
+        </span>
+        <span className={updater.status === "error" ? "update-check-status error" : "update-check-status"}>{message}</span>
+      </div>
+      <button
+        className={available ? "primary-button" : "secondary-button"}
+        type="button"
+        disabled={checking}
+        onClick={() => available ? updater.openDialog() : void updater.checkForUpdates()}
+      >
+        {checking ? <RefreshCw className="spin" size={16} aria-hidden="true" /> : available ? <Download size={16} aria-hidden="true" /> : <RefreshCw size={16} aria-hidden="true" />}
+        {checking ? "Checking..." : available ? "View update" : "Check for updates"}
+      </button>
+    </div>
   );
 }
 
