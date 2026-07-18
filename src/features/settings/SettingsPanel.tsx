@@ -66,7 +66,7 @@ function UpdaterSettings({ updater }: { updater: AppUpdater }) {
   const message = available
     ? `Version ${updater.updateVersion} is ready.`
     : updater.status === "current"
-      ? "You have the latest version."
+      ? "No updates available."
       : updater.status === "error"
         ? updater.errorMessage
         : "Updates are checked automatically.";

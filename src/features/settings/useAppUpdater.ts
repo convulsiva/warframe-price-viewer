@@ -144,7 +144,7 @@ function getUpdaterProxy(): string | undefined {
 function readableUpdaterError(error: unknown): string {
   const message = String(error).replace(/^Error:\s*/i, "");
   if (/valid release json|release json|update endpoint/i.test(message)) {
-    return "Could not check for updates right now. Please try again later.";
+    return "Update information is temporarily unavailable. Please try again later.";
   }
   if (/404|not found/i.test(message)) return "Update information is not available yet.";
   if (/network|connect|dns|request|timed out/i.test(message)) return "Could not reach the update service.";
