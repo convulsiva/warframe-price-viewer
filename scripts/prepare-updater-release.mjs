@@ -21,11 +21,11 @@ const windowsSignature = findOne(files, (file) => file.endsWith("-setup.exe.sig"
 await mkdir(outputDirectory, { recursive: true });
 
 const assetNames = {
-  macDmg: `Warframe-Price-Viewer-${version}-macOS-aarch64.dmg`,
-  macUpdater: `Warframe-Price-Viewer-${version}-macOS-aarch64.app.tar.gz`,
-  macSignature: `Warframe-Price-Viewer-${version}-macOS-aarch64.app.tar.gz.sig`,
-  windowsInstaller: `Warframe-Price-Viewer-${version}-Windows-x64-Setup.exe`,
-  windowsSignature: `Warframe-Price-Viewer-${version}-Windows-x64-Setup.exe.sig`
+  macDmg: `WFMarketTracker-${version}-macOS-aarch64.dmg`,
+  macUpdater: `WFMarketTracker-${version}-macOS-aarch64.app.tar.gz`,
+  macSignature: `WFMarketTracker-${version}-macOS-aarch64.app.tar.gz.sig`,
+  windowsInstaller: `WFMarketTracker-${version}-Windows-x64-Setup.exe`,
+  windowsSignature: `WFMarketTracker-${version}-Windows-x64-Setup.exe.sig`
 };
 
 await Promise.all([
@@ -36,7 +36,7 @@ await Promise.all([
   copyFile(windowsSignature, path.join(outputDirectory, assetNames.windowsSignature))
 ]);
 
-const notes = (await readFile(notesFile, "utf8")).trim() || `Warframe Price Viewer ${version}`;
+const notes = (await readFile(notesFile, "utf8")).trim() || `WFMarketTracker ${version}`;
 const releaseBaseUrl = `https://github.com/convulsiva/warframe-price-viewer/releases/download/${tag}`;
 const latest = {
   version,

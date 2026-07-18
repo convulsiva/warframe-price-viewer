@@ -146,7 +146,7 @@ fn send_price_alert_notification(
         .config()
         .product_name
         .clone()
-        .unwrap_or_else(|| "Warframe Price Viewer".to_string());
+        .unwrap_or_else(|| "WFMarketTracker".to_string());
 
     #[cfg(target_os = "macos")]
     {
@@ -253,7 +253,7 @@ pub fn run() {
             send_price_alert_notification
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Warframe Price Viewer");
+        .expect("error while running WFMarketTracker");
 }
 
 #[cfg(test)]

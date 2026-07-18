@@ -39,6 +39,7 @@ ${StrLoc}
 
 !define MANUFACTURER "{{manufacturer}}"
 !define PRODUCTNAME "{{product_name}}"
+!define OLDPRODUCTNAME "Warframe Price Viewer"
 !define VERSION "{{version}}"
 !define VERSIONWITHBUILD "{{version_with_build}}"
 !define HOMEPAGE "{{homepage}}"
@@ -64,8 +65,10 @@ ${StrLoc}
 !define WEBVIEW2INSTALLERPATH "{{webview2_installer_path}}"
 !define MINIMUMWEBVIEW2VERSION "{{minimum_webview2_version}}"
 !define UNINSTKEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}"
+!define OLDUNINSTKEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${OLDPRODUCTNAME}"
 !define MANUKEY "Software\${MANUFACTURER}"
 !define MANUPRODUCTKEY "${MANUKEY}\${PRODUCTNAME}"
+!define OLDMANUPRODUCTKEY "${MANUKEY}\${OLDPRODUCTNAME}"
 !define UNINSTALLERSIGNCOMMAND "{{uninstaller_sign_cmd}}"
 !define ESTIMATEDSIZE "{{estimated_size}}"
 !define STARTMENUFOLDER "{{start_menu_folder}}"
@@ -75,6 +78,9 @@ Var UpdateMode
 Var NoShortcutMode
 Var WixMode
 Var OldMainBinaryName
+Var ExistingUninstKey
+Var ExistingManuProductKey
+Var MigratingProductName
 
 Name "${PRODUCTNAME}"
 BrandingText "${COPYRIGHT}"
@@ -215,8 +221,8 @@ Function PageReinstall
   wix_loop_done:
 
   ; Check if there is an existing installation, if not, abort the reinstall page
-  ReadRegStr $R0 SHCTX "${UNINSTKEY}" ""
-  ReadRegStr $R1 SHCTX "${UNINSTKEY}" "UninstallString"
+  ReadRegStr $R0 SHCTX "$ExistingUninstKey" ""
+  ReadRegStr $R1 SHCTX "$ExistingUninstKey" "UninstallString"
   ${IfThen} "$R0$R1" == "" ${|} Abort ${|}
 
   ; Compare this installar version with the existing installation
@@ -226,7 +232,7 @@ Function PageReinstall
   ${If} $WixMode = 1
     ReadRegStr $R0 HKLM "$R6" "DisplayVersion"
   ${Else}
-    ReadRegStr $R0 SHCTX "${UNINSTKEY}" "DisplayVersion"
+    ReadRegStr $R0 SHCTX "$ExistingUninstKey" "DisplayVersion"
   ${EndIf}
   ${IfThen} $R0 == "" ${|} StrCpy $R4 "$(unknown)" ${|}
 
@@ -354,8 +360,8 @@ Function PageLeaveReinstall
       ReadRegStr $R1 HKLM "$R6" "UninstallString"
       ExecWait '$R1' $0
     ${Else}
-      ReadRegStr $4 SHCTX "${MANUPRODUCTKEY}" ""
-      ReadRegStr $R1 SHCTX "${UNINSTKEY}" "UninstallString"
+      ReadRegStr $4 SHCTX "$ExistingManuProductKey" ""
+      ReadRegStr $R1 SHCTX "$ExistingUninstKey" "UninstallString"
       ${IfThen} $UpdateMode = 1 ${|} StrCpy $R1 "$R1 /UPDATE" ${|} ; append /UPDATE
       ${IfThen} $PassiveMode = 1 ${|} StrCpy $R1 "$R1 /P" ${|} ; append /P
       StrCpy $R1 "$R1 _?=$4" ; append uninstall directory
@@ -497,6 +503,18 @@ Function .onInit
   !endif
 
   !insertmacro SetContext
+
+  StrCpy $ExistingUninstKey "${UNINSTKEY}"
+  StrCpy $ExistingManuProductKey "${MANUPRODUCTKEY}"
+  ReadRegStr $R0 SHCTX "${UNINSTKEY}" "UninstallString"
+  ${If} $R0 == ""
+    ReadRegStr $R0 SHCTX "${OLDUNINSTKEY}" "UninstallString"
+    ${If} $R0 != ""
+      StrCpy $ExistingUninstKey "${OLDUNINSTKEY}"
+      StrCpy $ExistingManuProductKey "${OLDMANUPRODUCTKEY}"
+      StrCpy $MigratingProductName 1
+    ${EndIf}
+  ${EndIf}
 
   ${If} $INSTDIR == "${PLACEHOLDER_INSTALL_DIR}"
     ; Set default install location
@@ -645,6 +663,9 @@ Section Install
   !endif
 
   !insertmacro CheckIfAppIsRunning "${MAINBINARYNAME}.exe" "${PRODUCTNAME}"
+  ${If} $MigratingProductName = 1
+    !insertmacro CheckIfAppIsRunning "warframe-price-viewer.exe" "${OLDPRODUCTNAME}"
+  ${EndIf}
 
   ; Copy main executable
   File "${MAINBINARYSRCPATH}"
@@ -690,7 +711,11 @@ Section Install
   !endif
 
   ; Remove old main binary if it doesn't match new main binary name
-  ReadRegStr $OldMainBinaryName SHCTX "${UNINSTKEY}" "MainBinaryName"
+  ReadRegStr $OldMainBinaryName SHCTX "$ExistingUninstKey" "MainBinaryName"
+  ${If} $MigratingProductName = 1
+  ${AndIf} $OldMainBinaryName == ""
+    StrCpy $OldMainBinaryName "warframe-price-viewer.exe"
+  ${EndIf}
   ${If} $OldMainBinaryName != ""
   ${AndIf} $OldMainBinaryName != "${MAINBINARYNAME}.exe"
     Delete "$INSTDIR\$OldMainBinaryName"
@@ -719,6 +744,13 @@ Section Install
     WriteRegStr SHCTX "${UNINSTKEY}" "URLUpdateInfo" "${HOMEPAGE}"
     WriteRegStr SHCTX "${UNINSTKEY}" "HelpLink" "${HOMEPAGE}"
   !endif
+
+  ${If} $MigratingProductName = 1
+    DeleteRegKey SHCTX "${OLDUNINSTKEY}"
+    DeleteRegKey SHCTX "${OLDMANUPRODUCTKEY}"
+    Delete "$SMPROGRAMS\${OLDPRODUCTNAME}.lnk"
+    Delete "$DESKTOP\${OLDPRODUCTNAME}.lnk"
+  ${EndIf}
 
   ; Create start menu shortcut
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
@@ -897,7 +929,7 @@ Section Uninstall
 SectionEnd
 
 Function RestorePreviousInstallLocation
-  ReadRegStr $4 SHCTX "${MANUPRODUCTKEY}" ""
+  ReadRegStr $4 SHCTX "$ExistingManuProductKey" ""
   StrCmp $4 "" +2 0
     StrCpy $INSTDIR $4
 FunctionEnd
@@ -939,6 +971,7 @@ Function CreateOrUpdateStartMenuShortcut
   ; Skip creating shortcut if in update mode or no shortcut mode
   ; but always create if migrating from wix
   ${If} $WixMode = 0
+  ${AndIf} $MigratingProductName != 1
     ${If} $UpdateMode = 1
     ${OrIf} $NoShortcutMode = 1
       Return
@@ -968,6 +1001,7 @@ Function CreateOrUpdateDesktopShortcut
   ; Skip creating shortcut if in update mode or no shortcut mode
   ; but always create if migrating from wix
   ${If} $WixMode = 0
+  ${AndIf} $MigratingProductName != 1
     ${If} $UpdateMode = 1
     ${OrIf} $NoShortcutMode = 1
       Return

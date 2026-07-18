@@ -90,7 +90,7 @@ export function App() {
     <main className="app-shell">
       <section className="top-band">
         <div>
-          <p className="eyebrow">Warframe market scanner</p>
+          <p className="eyebrow">WFMarketTracker</p>
           <h1>Price console</h1>
         </div>
         <div className="top-actions">
