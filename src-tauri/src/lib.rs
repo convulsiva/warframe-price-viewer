@@ -1,4 +1,5 @@
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 
 use notify_rust::NotificationResponse;
 use serde_json::Value;
@@ -8,19 +9,20 @@ use tauri::{
 };
 
 const WARFRAME_MARKET_API_BASE: &str = "https://api.warframe.market/v2";
+const REQUEST_TIMEOUT_SECS: u64 = 15;
 
 struct AppState {
     close_to_tray: AtomicBool,
 }
 
 #[tauri::command]
-async fn fetch_warframe_market(path: String) -> Result<Value, String> {
+async fn fetch_warframe_market(path: String, proxy_url: Option<String>) -> Result<Value, String> {
     if !path.starts_with('/') || path.contains("..") || path.contains('\\') {
         return Err("Invalid API path".to_string());
     }
 
     let url = format!("{WARFRAME_MARKET_API_BASE}{path}");
-    let client = reqwest::Client::new();
+    let client = build_http_client(proxy_url.as_deref())?;
     let response = client
         .get(url)
         .header("Accept", "application/json")
@@ -41,6 +43,85 @@ async fn fetch_warframe_market(path: String) -> Result<Value, String> {
         .json::<Value>()
         .await
         .map_err(|error| format!("Invalid JSON: {error}"))
+}
+
+#[tauri::command]
+async fn test_proxy(proxy_url: String) -> Result<(), String> {
+    let proxy_url = proxy_url.trim();
+    if proxy_url.is_empty() {
+        return Err("Enter an HTTP/HTTPS proxy URL first".to_string());
+    }
+
+    let client = build_http_client(Some(proxy_url))?;
+    let response = client
+        .get(format!("{WARFRAME_MARKET_API_BASE}/items"))
+        .header("Accept", "application/json")
+        .header("language", "en")
+        .header("platform", "pc")
+        .header("crossplay", "true")
+        .send()
+        .await
+        .map_err(|error| format!("Proxy test failed: {error}"))?;
+
+    if response.status().is_success() {
+        Ok(())
+    } else {
+        Err(format!("Proxy test failed with HTTP {}", response.status().as_u16()))
+    }
+}
+
+fn build_http_client(proxy_url: Option<&str>) -> Result<reqwest::Client, String> {
+    let mut builder = reqwest::Client::builder().timeout(Duration::from_secs(REQUEST_TIMEOUT_SECS));
+
+    if let Some(proxy_url) = proxy_url.map(str::trim).filter(|value| !value.is_empty()) {
+        let proxy_url = normalize_proxy_url(proxy_url)?;
+        validate_proxy_url(&proxy_url)?;
+        let proxy = reqwest::Proxy::all(&proxy_url).map_err(|error| format!("Invalid proxy: {error}"))?;
+        builder = builder.proxy(proxy);
+    }
+
+    builder
+        .build()
+        .map_err(|error| format!("HTTP client failed: {error}"))
+}
+
+fn normalize_proxy_url(proxy_url: &str) -> Result<String, String> {
+    let proxy_url = proxy_url.trim();
+    if proxy_url.starts_with("http://") || proxy_url.starts_with("https://") {
+        return Ok(proxy_url.to_string());
+    }
+
+    let parts: Vec<&str> = proxy_url.split(':').collect();
+    if parts.len() == 2 {
+        return Ok(format!("http://{}:{}", parts[0], parts[1]));
+    }
+
+    if parts.len() == 4 {
+        let host = parts[0].trim();
+        let port = parts[1].trim();
+        let username = parts[2].trim();
+        let password = parts[3].trim();
+        if host.is_empty() || port.is_empty() || username.is_empty() || password.is_empty() {
+            return Err("Proxy shorthand must be host:port:user:password".to_string());
+        }
+        return Ok(format!("http://{username}:{password}@{host}:{port}"));
+    }
+
+    Err("Use http://user:password@host:port or host:port:user:password".to_string())
+}
+
+fn validate_proxy_url(proxy_url: &str) -> Result<(), String> {
+    let parsed = url::Url::parse(proxy_url).map_err(|error| format!("Invalid proxy URL: {error}"))?;
+    match parsed.scheme() {
+        "http" | "https" => {}
+        _ => return Err("Only HTTP/HTTPS proxies are supported".to_string()),
+    }
+
+    if parsed.host_str().is_none() {
+        return Err("Proxy URL must include host".to_string());
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -164,10 +245,40 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             fetch_warframe_market,
+            test_proxy,
             write_clipboard_text,
             set_close_to_tray_enabled,
             send_price_alert_notification
         ])
         .run(tauri::generate_context!())
         .expect("error while running Warframe Price Viewer");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_proxy_url;
+
+    #[test]
+    fn keeps_full_http_proxy_url() {
+        assert_eq!(
+            normalize_proxy_url("http://user:password@host:1234").unwrap(),
+            "http://user:password@host:1234"
+        );
+    }
+
+    #[test]
+    fn converts_host_port_user_password_proxy_shorthand() {
+        assert_eq!(
+            normalize_proxy_url("45.11.124.145:9649:pC28RK:rBJQxL").unwrap(),
+            "http://pC28RK:rBJQxL@45.11.124.145:9649"
+        );
+    }
+
+    #[test]
+    fn converts_host_port_proxy_shorthand() {
+        assert_eq!(
+            normalize_proxy_url("45.11.124.145:9649").unwrap(),
+            "http://45.11.124.145:9649"
+        );
+    }
 }

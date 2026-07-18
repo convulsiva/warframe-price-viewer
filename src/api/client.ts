@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import { invoke } from "@tauri-apps/api/core";
+import { useSettingsStore } from "../features/settings/store";
 import { config } from "../lib/config";
 import { ApiError } from "./errors";
 
@@ -81,7 +82,12 @@ function isTauriRuntime(): boolean {
 
 async function requestJsonFromTauri<T>(path: string, schema: z.ZodSchema<T>): Promise<T> {
   try {
-    const json: unknown = await invoke("fetch_warframe_market", { path });
+    const { proxyUrl, useProxy } = useSettingsStore.getState();
+    const normalizedProxyUrl = useProxy ? proxyUrl.trim() : "";
+    const json: unknown = await invoke("fetch_warframe_market", {
+      path,
+      proxyUrl: normalizedProxyUrl.length > 0 ? normalizedProxyUrl : null
+    });
     const parsed = schema.safeParse(json);
     if (!parsed.success) {
       if (import.meta.env.DEV) {

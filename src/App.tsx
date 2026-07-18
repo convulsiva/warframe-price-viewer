@@ -11,7 +11,9 @@ import { MetricCard } from "./features/market/MetricCard";
 import { OrderFilters } from "./features/market/OrderFilters";
 import { OrderList } from "./features/market/OrderList";
 import { ItemSearch } from "./features/search/ItemSearch";
+import { SettingsMenu } from "./features/settings/SettingsPanel";
 import { useCloseToTray } from "./features/settings/useCloseToTray";
+import { useTheme } from "./features/settings/useTheme";
 import { formatPercent, formatPlatinum, formatRelative } from "./lib/format";
 import { useOnlineStatus } from "./lib/hooks";
 import { openExternalUrl } from "./lib/openExternal";
@@ -33,6 +35,7 @@ export function App() {
   const recents = useLibraryStore((state) => state.recents);
   const isFavorite = useLibraryStore((state) => (selectedSlug ? state.isFavorite(selectedSlug) : false));
   useCloseToTray();
+  useTheme();
   useFavoritePriceAlerts(favorites, online);
 
   const orders = useMemo(() => {
@@ -86,6 +89,7 @@ export function App() {
           <h1>Price console</h1>
         </div>
         <div className="top-actions">
+          <SettingsMenu />
           <button type="button" className="ghost-button" onClick={goHome}>
             <Home size={17} aria-hidden="true" />
             Home
