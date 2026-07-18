@@ -4,6 +4,8 @@ Desktop app for checking Warframe market prices, saving favorite items, and gett
 
 Available for macOS and Windows through GitHub Releases.
 
+License generation and owner instructions: [docs/licensing.md](docs/licensing.md).
+
 <p align="center"><strong>created by convulsiva &lt;3</strong></p>
 
 ---

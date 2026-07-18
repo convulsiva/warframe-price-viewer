@@ -1,6 +1,6 @@
 {
   "name": "warframe-price-viewer",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "Warframe market price viewer",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
@@ -11,6 +11,8 @@
     "test": "vitest run --exclude src/App.integration.test.tsx",
     "test:integration": "vitest run src/App.integration.test.tsx",
     "test:e2e": "playwright test",
+    "license:setup": "node scripts/setup-license-keys.mjs",
+    "license:generate": "node scripts/generate-license.mjs",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"

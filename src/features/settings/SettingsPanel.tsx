@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Download, Minimize2, RefreshCw } from "lucide-react";
+import { Download, KeyRound, Minimize2, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useLicenseStore } from "../license/store";
 import { useSettingsStore } from "./store";
 import type { AppUpdater } from "./useAppUpdater";
 
@@ -29,6 +30,7 @@ export function SettingsPanel() {
         <input type="checkbox" checked={closeToTray} onChange={(event) => setCloseToTray(event.target.checked)} />
       </label>
       <ThemeToggle enabled={theme === "light"} onChange={(enabled) => setTheme(enabled ? "light" : "dark")} />
+      <LicenseSettings />
       <ProxySettings settings={proxySettings} />
     </section>
   );
@@ -72,11 +74,37 @@ export function SettingsMenu({ updater }: { updater: AppUpdater }) {
           <input type="checkbox" checked={closeToTray} onChange={(event) => setCloseToTray(event.target.checked)} />
         </label>
         <ThemeToggle enabled={theme === "light"} onChange={(enabled) => setTheme(enabled ? "light" : "dark")} />
+        <LicenseSettings />
         <ProxySettings settings={proxySettings} />
         <UpdaterSettings updater={updater} />
       </div>
     </details>
   );
+}
+
+function LicenseSettings() {
+  const details = useLicenseStore((state) => state.details);
+  const clearLicense = useLicenseStore((state) => state.clearLicense);
+  if (!details) return null;
+
+  return (
+    <div className="license-settings">
+      <div className="license-settings-copy">
+        <KeyRound size={17} aria-hidden="true" />
+        <span>
+          <strong>License</strong>
+          <small>{details.expiresAt ? `Valid until ${formatLicenseDate(details.expiresAt)}` : "Lifetime access"}</small>
+        </span>
+      </div>
+      <button className="secondary-button" type="button" onClick={clearLicense}>
+        Replace
+      </button>
+    </div>
+  );
+}
+
+function formatLicenseDate(value: string): string {
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(value));
 }
 
 function NotificationsToggle({ enabled, onChange }: { enabled: boolean; onChange: (enabled: boolean) => void }) {
