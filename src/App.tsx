@@ -84,7 +84,6 @@ export function App() {
         <div>
           <p className="eyebrow">Warframe market scanner</p>
           <h1>Price console</h1>
-          <p className="creator-mark">created by convulsiva &lt;3</p>
         </div>
         <div className="top-actions">
           <button type="button" className="ghost-button" onClick={goHome}>
@@ -187,6 +186,7 @@ export function App() {
         </section>
         <LibraryPanel onOpen={openSlug} selected={item ?? null} />
       </div>
+      <p className="creator-mark">created by convulsiva &lt;3</p>
     </main>
   );
 }
