@@ -2,10 +2,9 @@ import { useEffect, useRef } from "react";
 import { fetchOrders } from "../../api/warframeMarket";
 import { sortOrders } from "../../domain/market";
 import type { FavoriteSnapshot, MarketOrder } from "../../domain/models";
-import { writeClipboardText } from "../../lib/clipboard";
 import { config } from "../../lib/config";
 import { formatPlatinum } from "../../lib/format";
-import { listenForNotificationActions, sendDesktopNotification } from "../../lib/notifications";
+import { sendDesktopNotification } from "../../lib/notifications";
 import { useLibraryStore } from "./store";
 
 const PRICE_ALERT_ACTION_TYPE = "price-alert-actions";
@@ -118,27 +117,11 @@ export function alertsForFavorite(
   };
 }
 
-export function useFavoritePriceAlerts(favorites: FavoriteSnapshot[], online: boolean) {
+export function useFavoritePriceAlerts(favorites: FavoriteSnapshot[], online: boolean, notificationsEnabled: boolean) {
   const favoritesRef = useRef(favorites);
   const cursorRef = useRef(0);
   const busyRef = useRef(false);
   const updateFavoritePrice = useLibraryStore((state) => state.updateFavoritePrice);
-
-  useEffect(() => {
-    let cleanup: (() => void) | undefined;
-
-    async function setup() {
-      cleanup = await listenForNotificationActions(async (command) => {
-        await writeClipboardText(command);
-      });
-    }
-
-    void setup();
-
-    return () => {
-      cleanup?.();
-    };
-  }, []);
 
   useEffect(() => {
     favoritesRef.current = favorites;
@@ -167,18 +150,20 @@ export function useFavoritePriceAlerts(favorites: FavoriteSnapshot[], online: bo
         const nextPrice = order?.platinum ?? null;
         const alertResult = alertsForFavorite(favorite, orders);
         const notifications = alertResult.notifications;
-        for (const notification of notifications) {
-          await sendDesktopNotification({
-            title: notification.title,
-            body: notification.body,
-            actionTypeId: PRICE_ALERT_ACTION_TYPE,
-            extra: { whisperCommand: notification.command }
-          });
+        if (notificationsEnabled) {
+          for (const notification of notifications) {
+            await sendDesktopNotification({
+              title: notification.title,
+              body: notification.body,
+              actionTypeId: PRICE_ALERT_ACTION_TYPE,
+              extra: { whisperCommand: notification.command }
+            });
+          }
         }
         updateFavoritePrice(
           favorite.slug,
           nextPrice,
-          notifications.length > 0,
+          notificationsEnabled && notifications.length > 0,
           alertResult.activeKeys
         );
       } catch {
@@ -197,5 +182,5 @@ export function useFavoritePriceAlerts(favorites: FavoriteSnapshot[], online: bo
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [online, updateFavoritePrice]);
+  }, [notificationsEnabled, online, updateFavoritePrice]);
 }

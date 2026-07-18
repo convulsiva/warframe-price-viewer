@@ -1,12 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import { Download, Minimize2, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "./store";
 import type { AppUpdater } from "./useAppUpdater";
 
 type ProxyTestState = "idle" | "testing" | "success" | "error";
 
 export function SettingsPanel() {
+  const notificationsEnabled = useSettingsStore((state) => state.notificationsEnabled);
+  const setNotificationsEnabled = useSettingsStore((state) => state.setNotificationsEnabled);
   const closeToTray = useSettingsStore((state) => state.closeToTray);
   const setCloseToTray = useSettingsStore((state) => state.setCloseToTray);
   const theme = useSettingsStore((state) => state.theme);
@@ -18,6 +20,7 @@ export function SettingsPanel() {
       <h2>
         <Minimize2 size={18} aria-hidden="true" /> Settings
       </h2>
+      <NotificationsToggle enabled={notificationsEnabled} onChange={setNotificationsEnabled} />
       <label className="toggle-row">
         <span>
           <strong>Close to tray</strong>
@@ -32,19 +35,35 @@ export function SettingsPanel() {
 }
 
 export function SettingsMenu({ updater }: { updater: AppUpdater }) {
+  const menuRef = useRef<HTMLDetailsElement>(null);
+  const notificationsEnabled = useSettingsStore((state) => state.notificationsEnabled);
+  const setNotificationsEnabled = useSettingsStore((state) => state.setNotificationsEnabled);
   const closeToTray = useSettingsStore((state) => state.closeToTray);
   const setCloseToTray = useSettingsStore((state) => state.setCloseToTray);
   const theme = useSettingsStore((state) => state.theme);
   const setTheme = useSettingsStore((state) => state.setTheme);
   const proxySettings = useProxySettings();
 
+  useEffect(() => {
+    function closeWhenClickingOutside(event: PointerEvent) {
+      const menu = menuRef.current;
+      if (menu?.open && event.target instanceof Node && !menu.contains(event.target)) {
+        menu.removeAttribute("open");
+      }
+    }
+
+    document.addEventListener("pointerdown", closeWhenClickingOutside);
+    return () => document.removeEventListener("pointerdown", closeWhenClickingOutside);
+  }, []);
+
   return (
-    <details className="settings-menu">
+    <details className="settings-menu" ref={menuRef}>
       <summary>
         <Minimize2 size={16} aria-hidden="true" />
         Settings
       </summary>
       <div className="settings-menu-panel">
+        <NotificationsToggle enabled={notificationsEnabled} onChange={setNotificationsEnabled} />
         <label className="toggle-row">
           <span>
             <strong>Close to tray</strong>
@@ -57,6 +76,22 @@ export function SettingsMenu({ updater }: { updater: AppUpdater }) {
         <UpdaterSettings updater={updater} />
       </div>
     </details>
+  );
+}
+
+function NotificationsToggle({ enabled, onChange }: { enabled: boolean; onChange: (enabled: boolean) => void }) {
+  return (
+    <label className="toggle-row">
+      <span>
+        <strong>Notifications</strong>
+        <small>Allow desktop price alert notifications.</small>
+      </span>
+      <input
+        type="checkbox"
+        checked={enabled}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+    </label>
   );
 }
 

@@ -41,6 +41,7 @@ describe("App integration", () => {
     await userEvent.click(await screen.findByRole("option", { name: /lex prime set/i }));
 
     expect(await screen.findByRole("heading", { name: /lex prime set/i })).toBeInTheDocument();
+    expect(screen.getByLabelText("45 Ducats")).toBeInTheDocument();
     await waitFor(() => expect(screen.getAllByText("5 pt").length).toBeGreaterThan(0));
     expect(screen.getAllByText("3 pt").length).toBeGreaterThan(0);
 
@@ -61,5 +62,23 @@ describe("App integration", () => {
     mockFetch(429);
     renderApp();
     expect(await screen.findByText(/rate limit/i)).toBeInTheDocument();
+  });
+
+  it("toggles notifications and closes settings when clicking outside", async () => {
+    mockFetch();
+    renderApp();
+
+    const settingsSummary = screen.getByText("Settings");
+    await userEvent.click(settingsSummary);
+    const settingsMenu = settingsSummary.closest("details");
+    expect(settingsMenu).toHaveAttribute("open");
+
+    const notificationsToggle = screen.getByRole("checkbox", { name: /^notifications/i });
+    expect(notificationsToggle).toBeChecked();
+    await userEvent.click(notificationsToggle);
+    expect(notificationsToggle).not.toBeChecked();
+
+    await userEvent.click(screen.getByRole("button", { name: /home/i }));
+    expect(settingsMenu).not.toHaveAttribute("open");
   });
 });

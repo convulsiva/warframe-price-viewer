@@ -1,6 +1,6 @@
 [package]
 name = "warframe-price-viewer"
-version = "1.4.1"
+version = "1.5.0"
 description = "Warframe market price viewer"
 authors = ["Warframe Price Viewer"]
 edition = "2021"

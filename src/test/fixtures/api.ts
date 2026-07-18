@@ -5,6 +5,7 @@ export const itemsFixture = {
       id: "lex",
       slug: "lex_prime_set",
       tags: ["weapon", "prime", "set"],
+      ducats: 45,
       tradable: true,
       i18n: {
         en: {
