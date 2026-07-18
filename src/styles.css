@@ -183,6 +183,214 @@ select:disabled {
   padding: clamp(14px, 1.7vw, 24px);
 }
 
+.license-screen {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+}
+
+.license-panel {
+  width: min(560px, 100%);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  padding: clamp(22px, 4vw, 34px);
+  background:
+    linear-gradient(180deg, rgba(117, 216, 214, 0.075), transparent 38%),
+    rgba(9, 17, 21, 0.97);
+  box-shadow:
+    var(--shadow-panel),
+    inset 0 1px 0 rgba(255, 255, 255, 0.055);
+}
+
+.license-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.license-brand h1 {
+  margin: 3px 0 0;
+  font-size: clamp(1.65rem, 4vw, 2.25rem);
+  letter-spacing: 0;
+}
+
+.license-brand .eyebrow {
+  margin: 0;
+}
+
+.license-mark {
+  display: grid;
+  width: 50px;
+  height: 50px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(117, 216, 214, 0.28);
+  border-radius: var(--radius-md);
+  background: var(--cyan-soft);
+  color: var(--cyan);
+}
+
+.license-intro {
+  margin: 22px 0 18px;
+  color: var(--text-soft);
+  line-height: 1.55;
+}
+
+.license-form {
+  display: grid;
+  gap: 10px;
+}
+
+.license-form label {
+  color: var(--text-soft);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.license-form textarea {
+  width: 100%;
+  min-height: 104px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 13px 14px;
+  background: var(--field);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+}
+
+.license-form textarea:focus {
+  border-color: rgba(117, 216, 214, 0.5);
+  box-shadow: 0 0 0 3px rgba(117, 216, 214, 0.1);
+}
+
+.license-form .primary-button {
+  justify-self: end;
+  min-height: 40px;
+}
+
+.license-error,
+.license-expired {
+  border: 1px solid rgba(255, 138, 138, 0.24);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 138, 138, 0.07);
+  color: var(--danger);
+}
+
+.license-error {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  font-size: 0.82rem;
+}
+
+.license-expired {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 12px;
+  margin: 0 0 14px;
+  padding: 11px 12px;
+}
+
+.license-expired span,
+.license-expired small {
+  color: var(--text-soft);
+  font-size: 0.74rem;
+}
+
+.license-expired small {
+  grid-column: 1 / -1;
+}
+
+.license-support {
+  margin: 18px 0 0;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  text-align: center;
+}
+
+.license-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-soft);
+}
+
+.license-loading svg {
+  color: var(--cyan);
+}
+
+.license-settings {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  background: var(--surface-soft);
+}
+
+.license-settings-copy {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.license-settings-copy svg {
+  flex: 0 0 auto;
+  color: var(--cyan);
+}
+
+.license-settings-copy span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.license-settings-copy small {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+html[data-theme="light"] .license-panel {
+  background:
+    linear-gradient(180deg, rgba(21, 127, 132, 0.07), transparent 40%),
+    rgba(248, 251, 251, 0.98);
+  box-shadow: var(--shadow-panel), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+html[data-theme="light"] .license-form textarea {
+  background: rgba(255, 255, 255, 0.82);
+}
+
+html[data-theme="light"] .license-error,
+html[data-theme="light"] .license-expired {
+  border-color: rgba(184, 61, 74, 0.25);
+  background: rgba(184, 61, 74, 0.07);
+}
+
+@media (max-width: 460px) {
+  .license-screen {
+    padding: 12px;
+  }
+
+  .license-panel {
+    padding: 18px;
+  }
+
+  .license-form .primary-button {
+    width: 100%;
+  }
+}
+
 .top-band,
 .layout,
 .item-header,
