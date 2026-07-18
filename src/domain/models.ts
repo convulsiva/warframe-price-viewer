@@ -13,6 +13,7 @@ export type MarketItem = {
   iconUrl: string | null;
   thumbUrl: string | null;
   tradable: boolean;
+  ducats: number | null;
   masteryRank: number | null;
   tradingTax: number | null;
 };

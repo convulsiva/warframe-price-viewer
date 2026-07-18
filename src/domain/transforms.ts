@@ -36,6 +36,7 @@ export function normalizeItem(item: ApiItem): MarketItem {
     iconUrl: assetUrl(preferred.icon ?? english.icon),
     thumbUrl: assetUrl(preferred.thumb ?? english.thumb),
     tradable: item.tradable ?? true,
+    ducats: item.ducats ?? null,
     masteryRank: item.reqMasteryRank ?? null,
     tradingTax: item.tradingTax ?? null
   };

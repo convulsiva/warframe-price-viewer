@@ -1,4 +1,4 @@
-import { ExternalLink, Home, RefreshCw, Star, WifiOff } from "lucide-react";
+import { Coins, ExternalLink, Home, RefreshCw, Star, WifiOff } from "lucide-react";
 import { useMemo, useState } from "react";
 import { isApiError, messageForError } from "./api/errors";
 import { useItemDetailQuery, useItemsQuery, useOrdersQuery, useTopOrdersQuery } from "./api/warframeMarket";
@@ -16,6 +16,7 @@ import { UpdateDialog } from "./features/settings/UpdateDialog";
 import { useAppUpdater } from "./features/settings/useAppUpdater";
 import { useCloseToTray } from "./features/settings/useCloseToTray";
 import { useTheme } from "./features/settings/useTheme";
+import { useSettingsStore } from "./features/settings/store";
 import { formatPercent, formatPlatinum, formatRelative } from "./lib/format";
 import { useOnlineStatus } from "./lib/hooks";
 import { openExternalUrl } from "./lib/openExternal";
@@ -36,10 +37,11 @@ export function App() {
   const removeFavorite = useLibraryStore((state) => state.removeFavorite);
   const favorites = useLibraryStore((state) => state.favorites);
   const recents = useLibraryStore((state) => state.recents);
+  const notificationsEnabled = useSettingsStore((state) => state.notificationsEnabled);
   const isFavorite = useLibraryStore((state) => (selectedSlug ? state.isFavorite(selectedSlug) : false));
   useCloseToTray();
   useTheme();
-  useFavoritePriceAlerts(favorites, online);
+  useFavoritePriceAlerts(favorites, online, notificationsEnabled);
 
   const orders = useMemo(() => {
     if (ordersQuery.data) return ordersQuery.data;
@@ -125,37 +127,46 @@ export function App() {
                     </div>
                   </div>
                 </div>
-                <div className="actions">
-                  <button
-                    type="button"
-                    className="primary-button"
-                    onClick={() => (isFavorite ? removeFavorite(item.slug) : addFavorite(item, favoriteSummary))}
-                    aria-pressed={isFavorite}
-                  >
-                    <Star size={17} aria-hidden="true" />
-                    {isFavorite ? "Saved" : "Save"}
-                  </button>
-                  <button
-                    type="button"
-                    className={isRefetching ? "icon-button is-refetching" : "icon-button"}
-                    aria-label={isRefetching ? "Refreshing orders" : "Refresh orders"}
-                    onClick={() => {
-                      void topOrdersQuery.refetch();
-                      void ordersQuery.refetch();
-                    }}
-                  >
-                    <RefreshCw size={18} aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    className="icon-button"
-                    aria-label="Open on warframe.market"
-                    onClick={() => {
-                      void openExternalUrl(`https://warframe.market/items/${item.slug}`);
-                    }}
-                  >
-                    <ExternalLink size={18} aria-hidden="true" />
-                  </button>
+                <div className="item-header-tools">
+                  {/\bprime\b/i.test(item.englishName) && item.ducats !== null && (
+                    <div className="ducats-value" aria-label={`${item.ducats} Ducats`}>
+                      <Coins size={18} aria-hidden="true" />
+                      <strong>{item.ducats}</strong>
+                      <span>Ducats</span>
+                    </div>
+                  )}
+                  <div className="actions">
+                    <button
+                      type="button"
+                      className="primary-button"
+                      onClick={() => (isFavorite ? removeFavorite(item.slug) : addFavorite(item, favoriteSummary))}
+                      aria-pressed={isFavorite}
+                    >
+                      <Star size={17} aria-hidden="true" />
+                      {isFavorite ? "Saved" : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      className={isRefetching ? "icon-button is-refetching" : "icon-button"}
+                      aria-label={isRefetching ? "Refreshing orders" : "Refresh orders"}
+                      onClick={() => {
+                        void topOrdersQuery.refetch();
+                        void ordersQuery.refetch();
+                      }}
+                    >
+                      <RefreshCw size={18} aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      className="icon-button"
+                      aria-label="Open on warframe.market"
+                      onClick={() => {
+                        void openExternalUrl(`https://warframe.market/items/${item.slug}`);
+                      }}
+                    >
+                      <ExternalLink size={18} aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
