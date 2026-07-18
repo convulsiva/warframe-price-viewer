@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680" role="img" aria-label="Warframe Price Viewer screenshot placeholder">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680" role="img" aria-label="WFMarketTracker screenshot placeholder">
   <rect width="1200" height="680" fill="#05080d"/>
   <rect x="80" y="80" width="1040" height="520" rx="8" fill="#0d141d" stroke="#25465a"/>
-  <text x="600" y="315" text-anchor="middle" fill="#77d9e8" font-family="Arial, sans-serif" font-size="34">Warframe Price Viewer</text>
+  <text x="600" y="315" text-anchor="middle" fill="#77d9e8" font-family="Arial, sans-serif" font-size="34">WFMarketTracker</text>
   <text x="600" y="360" text-anchor="middle" fill="#aeb8c8" font-family="Arial, sans-serif" font-size="18">Screenshot placeholder</text>
 </svg>
