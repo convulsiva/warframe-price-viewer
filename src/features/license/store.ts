@@ -11,29 +11,31 @@ export type LicenseDetails = {
 export type LicenseStatus = "checking" | "unlicensed" | "valid" | "expired" | "invalid";
 
 type LicenseState = {
-  licenseKey: string;
+  leaseToken: string;
   status: LicenseStatus;
   details: LicenseDetails | null;
+  offlineUntil: string | null;
   message: string;
-  setLicenseKey: (licenseKey: string) => void;
-  setValidation: (status: LicenseStatus, details?: LicenseDetails | null, message?: string) => void;
+  setLease: (leaseToken: string, details: LicenseDetails, offlineUntil: string) => void;
+  setValidation: (status: LicenseStatus, details?: LicenseDetails | null, message?: string, offlineUntil?: string | null) => void;
   clearLicense: () => void;
 };
 
 export const useLicenseStore = create<LicenseState>()(
   persist(
     (set) => ({
-      licenseKey: "",
+      leaseToken: "",
       status: "checking",
       details: null,
+      offlineUntil: null,
       message: "",
-      setLicenseKey: (licenseKey) => set({ licenseKey }),
-      setValidation: (status, details = null, message = "") => set({ status, details, message }),
-      clearLicense: () => set({ licenseKey: "", status: "unlicensed", details: null, message: "" })
+      setLease: (leaseToken, details, offlineUntil) => set({ leaseToken, details, offlineUntil, status: "valid", message: "" }),
+      setValidation: (status, details = null, message = "", offlineUntil = null) => set({ status, details, message, offlineUntil }),
+      clearLicense: () => set({ leaseToken: "", status: "unlicensed", details: null, offlineUntil: null, message: "" })
     }),
     {
       name: "wfmarkettracker-license",
-      partialize: (state) => ({ licenseKey: state.licenseKey })
+      partialize: (state) => ({ leaseToken: state.leaseToken })
     }
   )
 );

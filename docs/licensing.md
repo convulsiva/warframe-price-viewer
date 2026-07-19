@@ -1,66 +1,103 @@
 # WFMarketTracker licensing
 
-## Private key
+WFMarketTracker uses one-device server activation. An activation key can be redeemed on one computer. The server returns an Ed25519-signed lease that keeps the application available offline for up to 72 hours.
 
-The private signing key is stored outside the repository:
+## Server
+
+The production license API is available at:
 
 ```text
-~/.wfmarkettracker/license-private-key.pem
+https://46.101.251.26
 ```
 
-Create it once with:
+The service runs as `wfmarkettracker-license.service`. Its SQLite database and private signing key are stored in `/var/lib/wfmarkettracker` and are readable only by the service account. The private signing key must never be copied into the repository or an application build.
+
+Connect to the server:
 
 ```bash
-npm run license:setup
+ssh -i ~/.ssh/wfmarkettracker_server_ed25519 root@46.101.251.26
 ```
 
-Back up this file in an encrypted password manager or encrypted external drive. Never commit it, upload it to GitHub, send it to a customer, or include it in a release. Losing it means you cannot generate licenses accepted by this application build.
+## Create a license
 
-The matching public key is stored in `src-tauri/license-public-key.txt`. It is safe to include in the application.
-
-## Generate licenses
-
-Interactive mode:
+Thirty days:
 
 ```bash
-npm run license:generate
+wfm-license create \
+  --database /var/lib/wfmarkettracker/licenses.sqlite3 \
+  --customer "customer@example.com" \
+  --days 30
 ```
 
-The command asks for the customer and a duration in days. Leave the duration empty to create a lifetime license.
-
-Lifetime license:
+Lifetime:
 
 ```bash
-npm run license:generate -- --customer "customer@example.com" --lifetime
+wfm-license create \
+  --database /var/lib/wfmarkettracker/licenses.sqlite3 \
+  --customer "customer@example.com" \
+  --lifetime
 ```
 
-License valid for 30 days from generation:
+The activation key is displayed once. Send the `WFMK-...` value to the customer. The database stores only its SHA-256 hash, so a lost activation key cannot be recovered.
+
+## Manage licenses
+
+List licenses:
 
 ```bash
-npm run license:generate -- --customer "customer@example.com" --days 30
+wfm-license list --database /var/lib/wfmarkettracker/licenses.sqlite3
 ```
 
-License valid until the end of a specific UTC date:
+Extend an existing license by 30 days:
 
 ```bash
-npm run license:generate -- --customer "customer@example.com" --expires 2026-12-31
+wfm-license extend --database /var/lib/wfmarkettracker/licenses.sqlite3 --id LIC-XXXXXXXXXXXX --days 30
 ```
 
-Optional custom license ID:
+Convert a license to lifetime:
 
 ```bash
-npm run license:generate -- --customer "customer@example.com" --days 30 --id WFM-CUSTOMER-001
+wfm-license extend --database /var/lib/wfmarkettracker/licenses.sqlite3 --id LIC-XXXXXXXXXXXX --lifetime
 ```
 
-Send only the generated `WFM1...` license string to the customer.
+Revoke a license:
+
+```bash
+wfm-license revoke --database /var/lib/wfmarkettracker/licenses.sqlite3 --id LIC-XXXXXXXXXXXX
+```
+
+Release its device binding before moving it to a replacement computer:
+
+```bash
+wfm-license reset-device --database /var/lib/wfmarkettracker/licenses.sqlite3 --id LIC-XXXXXXXXXXXX
+```
+
+Resetting a device does not reveal or replace the original activation key. Generate a new license if the customer no longer has that key.
 
 ## Application behavior
 
-- The application validates the stored license at startup.
-- A valid license is checked again every 60 seconds, when the window regains focus, and when it becomes visible.
-- An expired or invalid license immediately locks the main interface.
-- The license is stored locally after successful activation.
-- A customer can replace a license from Settings or from the locked activation screen.
-- Lifetime licenses have no expiration date.
+- Activation binds the key to a privacy-preserving hash derived from the computer identity.
+- Reusing the key on the same computer is allowed after reinstalling the application.
+- Reusing it on another computer is rejected until the owner resets the device binding.
+- The application checks the signed lease locally at every startup.
+- It contacts the server at startup, every six hours, and after returning to the application.
+- A temporary server or internet outage does not interrupt an unexpired 72-hour offline lease.
+- Revoked and expired licenses lock when the next online check succeeds, or when the current offline lease expires.
+- Application updates keep the stored lease.
 
-This is offline licensing. Issued licenses cannot be remotely revoked, and the application uses the computer's system clock when checking expiration.
+## Operations
+
+Check the service:
+
+```bash
+systemctl status wfmarkettracker-license
+curl https://46.101.251.26/health
+```
+
+View recent logs:
+
+```bash
+journalctl -u wfmarkettracker-license --since today
+```
+
+The short-lived IP certificate is renewed automatically by Certbot. When a domain becomes available, replace the IP URL and certificate configuration before releasing the corresponding client update.
