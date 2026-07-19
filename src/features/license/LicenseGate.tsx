@@ -1,51 +1,87 @@
 import { KeyRound, LockKeyhole, ShieldCheck } from "lucide-react";
-import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from "react";
+import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useTheme } from "../settings/useTheme";
-import { verifyLicenseKey } from "./api";
+import {
+  activateLicenseKey,
+  isAuthoritativeLicenseError,
+  readableLicenseError,
+  refreshLicenseLease,
+  verifyLicenseLease
+} from "./api";
 import { useLicenseStore } from "./store";
 
-const LICENSE_CHECK_INTERVAL_MS = 60_000;
+const LICENSE_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const MINIMUM_FOCUS_REFRESH_MS = 5 * 60 * 1000;
 
 export function LicenseGate({ children }: { children: ReactNode }) {
   useTheme();
-  const licenseKey = useLicenseStore((state) => state.licenseKey);
+  const leaseToken = useLicenseStore((state) => state.leaseToken);
   const status = useLicenseStore((state) => state.status);
   const details = useLicenseStore((state) => state.details);
   const message = useLicenseStore((state) => state.message);
-  const setLicenseKey = useLicenseStore((state) => state.setLicenseKey);
+  const setLease = useLicenseStore((state) => state.setLease);
   const setValidation = useLicenseStore((state) => state.setValidation);
+  const lastRefreshAttempt = useRef(0);
 
-  const validate = useCallback(async (key: string, showLoading = false) => {
-    const normalizedKey = key.trim();
-    if (!normalizedKey) {
-      setValidation("unlicensed");
-      return false;
-    }
-    if (showLoading) setValidation("checking");
-
+  const refresh = useCallback(async (token: string): Promise<"ok" | "offline" | "rejected"> => {
+    lastRefreshAttempt.current = Date.now();
     try {
-      const result = await verifyLicenseKey(normalizedKey);
-      if (result.status === "expired") {
-        setValidation("expired", result.details, "This license has expired.");
-        return false;
-      }
-      setValidation("valid", result.details);
-      return true;
+      const result = await refreshLicenseLease(token);
+      setLease(result.leaseToken, result.details, result.offlineUntil);
+      return "ok";
     } catch (error) {
-      setValidation("invalid", null, readableError(error));
-      return false;
+      if (isAuthoritativeLicenseError(error)) {
+        const expired = String(error).includes("[LICENSE_EXPIRED]");
+        setValidation(expired ? "expired" : "invalid", null, readableLicenseError(error));
+        return "rejected";
+      }
+      return "offline";
     }
-  }, [setValidation]);
+  }, [setLease, setValidation]);
 
   useEffect(() => {
-    void validate(licenseKey, true);
-  }, [licenseKey, validate]);
+    let cancelled = false;
+    async function validateStoredLease() {
+      if (!leaseToken) {
+        setValidation("unlicensed");
+        return;
+      }
+      setValidation("checking");
+      try {
+        const result = await verifyLicenseLease(leaseToken);
+        if (cancelled) return;
+        if (result.status === "valid") {
+          setValidation("valid", result.details, "", result.offlineUntil);
+          if (lastRefreshAttempt.current === 0) await refresh(leaseToken);
+          return;
+        }
+
+        const renewal = await refresh(leaseToken);
+        if (renewal === "offline" && !cancelled) {
+          setValidation(
+            "expired",
+            result.details,
+            "Offline access has ended. Connect to the internet to renew your license session.",
+            result.offlineUntil
+          );
+        }
+      } catch (error) {
+        if (!cancelled) setValidation("invalid", null, readableLicenseError(error));
+      }
+    }
+    void validateStoredLease();
+    return () => {
+      cancelled = true;
+    };
+  }, [leaseToken, refresh, setValidation]);
 
   useEffect(() => {
-    if (status !== "valid" || !licenseKey) return;
+    if (status !== "valid" || !leaseToken) return;
 
-    const check = () => void validate(licenseKey);
-    const interval = window.setInterval(check, LICENSE_CHECK_INTERVAL_MS);
+    const check = () => {
+      if (Date.now() - lastRefreshAttempt.current >= MINIMUM_FOCUS_REFRESH_MS) void refresh(leaseToken);
+    };
+    const interval = window.setInterval(() => void refresh(leaseToken), LICENSE_REFRESH_INTERVAL_MS);
     const checkWhenVisible = () => {
       if (document.visibilityState === "visible") check();
     };
@@ -56,13 +92,20 @@ export function LicenseGate({ children }: { children: ReactNode }) {
       window.removeEventListener("focus", check);
       document.removeEventListener("visibilitychange", checkWhenVisible);
     };
-  }, [licenseKey, status, validate]);
+  }, [leaseToken, refresh, status]);
 
   async function activate(key: string) {
     const normalizedKey = key.trim();
-    const activated = await validate(normalizedKey, true);
-    if (activated) setLicenseKey(normalizedKey);
-    return activated;
+    if (!normalizedKey) return false;
+    setValidation("checking");
+    try {
+      const result = await activateLicenseKey(normalizedKey);
+      setLease(result.leaseToken, result.details, result.offlineUntil);
+      return true;
+    } catch (error) {
+      setValidation("invalid", null, readableLicenseError(error));
+      return false;
+    }
   }
 
   if (status === "valid") return children;
@@ -132,7 +175,7 @@ function ActivationScreen({ status, details, message, onActivate }: ActivationSc
             autoCapitalize="off"
             autoCorrect="off"
             spellCheck={false}
-            placeholder="WFM1..."
+            placeholder="WFMK-XXXX-XXXX-XXXX-XXXX-XXXX"
             value={licenseKey}
             onChange={(event) => setLicenseKey(event.target.value)}
           />
@@ -151,9 +194,4 @@ function ActivationScreen({ status, details, message, onActivate }: ActivationSc
 function formatExpiration(expiresAt: string | null): string {
   if (!expiresAt) return "Lifetime license";
   return `Expired ${new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(expiresAt))}`;
-}
-
-function readableError(error: unknown): string {
-  const message = String(error instanceof Error ? error.message : error);
-  return message && message !== "undefined" ? message : "This license key is not valid.";
 }
