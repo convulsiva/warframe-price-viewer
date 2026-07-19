@@ -145,6 +145,7 @@ struct LicenseRecord {
     customer: String,
     status: String,
     created_at: String,
+    duration_days: Option<i64>,
     expires_at: Option<String>,
     device_id: Option<String>,
 }
@@ -154,6 +155,7 @@ struct HealthResponse {
     status: &'static str,
 }
 
+#[derive(Debug)]
 struct ApiError {
     status: StatusCode,
     code: &'static str,
@@ -253,7 +255,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             customer,
             days,
             lifetime,
-        } => create_license(&database, &customer, expiration(days, lifetime)?)?,
+        } => create_license(&database, &customer, license_duration(days, lifetime)?)?,
         Command::List { database } => list_licenses(&database)?,
         Command::Revoke { database, id } => set_status(&database, &id, "revoked")?,
         Command::ResetDevice { database, id } => reset_device(&database, &id)?,
@@ -299,10 +301,22 @@ async fn activate(
             ));
         }
         None => {
+            if record.expires_at.is_none() {
+                record.expires_at = record
+                    .duration_days
+                    .map(|days| timestamp(now + Duration::days(days)));
+            }
             transaction
                 .execute(
-                    "UPDATE licenses SET device_id = ?1, activated_at = ?2, last_seen_at = ?2 WHERE id = ?3",
-                    params![request.device_id, timestamp(now), record.id],
+                    "UPDATE licenses
+                     SET device_id = ?1, activated_at = ?2, last_seen_at = ?2, expires_at = ?3
+                     WHERE id = ?4",
+                    params![
+                        request.device_id,
+                        timestamp(now),
+                        record.expires_at,
+                        record.id
+                    ],
                 )
                 .map_err(|_| ApiError::internal())?;
             record.device_id = Some(request.device_id.clone());
@@ -511,6 +525,7 @@ fn open_database(path: &Path) -> Result<Connection, Box<dyn std::error::Error>> 
             customer TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'revoked')),
             created_at TEXT NOT NULL,
+            duration_days INTEGER,
             expires_at TEXT,
             device_id TEXT,
             activated_at TEXT,
@@ -526,7 +541,33 @@ fn open_database(path: &Path) -> Result<Connection, Box<dyn std::error::Error>> 
         );
         CREATE INDEX IF NOT EXISTS audit_events_license_id ON audit_events(license_id, created_at);",
     )?;
+    if !column_exists(&connection, "licenses", "duration_days")? {
+        connection.execute("ALTER TABLE licenses ADD COLUMN duration_days INTEGER", [])?;
+        connection.execute_batch(
+            "UPDATE licenses
+             SET duration_days = MAX(1, CAST(ROUND(julianday(expires_at) - julianday(created_at)) AS INTEGER))
+             WHERE duration_days IS NULL AND expires_at IS NOT NULL;
+             UPDATE licenses
+             SET expires_at = NULL
+             WHERE duration_days IS NOT NULL AND device_id IS NULL AND activated_at IS NULL;",
+        )?;
+    }
     Ok(connection)
+}
+
+fn column_exists(
+    connection: &Connection,
+    table: &str,
+    column: &str,
+) -> Result<bool, rusqlite::Error> {
+    let mut statement = connection.prepare(&format!("PRAGMA table_info({table})"))?;
+    let columns = statement.query_map([], |row| row.get::<_, String>(1))?;
+    for current in columns {
+        if current? == column {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 fn license_by_key_hash(
@@ -535,7 +576,7 @@ fn license_by_key_hash(
 ) -> Result<Option<LicenseRecord>, ApiError> {
     query_license(
         transaction,
-        "SELECT id, customer, status, created_at, expires_at, device_id FROM licenses WHERE key_hash = ?1",
+        "SELECT id, customer, status, created_at, duration_days, expires_at, device_id FROM licenses WHERE key_hash = ?1",
         key_hash,
     )
 }
@@ -546,7 +587,7 @@ fn license_by_id(
 ) -> Result<Option<LicenseRecord>, ApiError> {
     query_license(
         transaction,
-        "SELECT id, customer, status, created_at, expires_at, device_id FROM licenses WHERE id = ?1",
+        "SELECT id, customer, status, created_at, duration_days, expires_at, device_id FROM licenses WHERE id = ?1",
         id,
     )
 }
@@ -563,8 +604,9 @@ fn query_license(
                 customer: row.get(1)?,
                 status: row.get(2)?,
                 created_at: row.get(3)?,
-                expires_at: row.get(4)?,
-                device_id: row.get(5)?,
+                duration_days: row.get(4)?,
+                expires_at: row.get(5)?,
+                device_id: row.get(6)?,
             })
         })
         .optional()
@@ -633,7 +675,7 @@ fn read_signing_key(path: &Path) -> Result<SigningKey, Box<dyn std::error::Error
 fn create_license(
     database_path: &Path,
     customer: &str,
-    expires_at: Option<DateTime<Utc>>,
+    duration_days: Option<i64>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let customer = customer.trim();
     if customer.is_empty() {
@@ -651,14 +693,15 @@ fn create_license(
         &raw[16..20]
     );
     database.execute(
-        "INSERT INTO licenses (id, key_hash, key_suffix, customer, created_at, expires_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        "INSERT INTO licenses (id, key_hash, key_suffix, customer, created_at, duration_days)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         params![
             id,
             activation_key_hash(&activation_key),
             &activation_key[activation_key.len() - 4..],
             customer,
             timestamp(Utc::now()),
-            expires_at.map(timestamp)
+            duration_days
         ],
     )?;
     println!("License ID: {id}");
@@ -670,7 +713,7 @@ fn create_license(
 fn list_licenses(database_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let database = open_database(database_path)?;
     let mut statement = database.prepare(
-        "SELECT id, customer, status, key_suffix, created_at, expires_at, device_id, last_seen_at
+        "SELECT id, customer, status, key_suffix, created_at, duration_days, expires_at, device_id, last_seen_at
          FROM licenses ORDER BY created_at DESC",
     )?;
     let rows = statement.query_map([], |row| {
@@ -680,17 +723,24 @@ fn list_licenses(database_path: &Path) -> Result<(), Box<dyn std::error::Error>>
             row.get::<_, String>(2)?,
             row.get::<_, String>(3)?,
             row.get::<_, String>(4)?,
-            row.get::<_, Option<String>>(5)?,
+            row.get::<_, Option<i64>>(5)?,
             row.get::<_, Option<String>>(6)?,
             row.get::<_, Option<String>>(7)?,
+            row.get::<_, Option<String>>(8)?,
         ))
     })?;
     println!("ID\tSTATUS\tKEY\tCUSTOMER\tEXPIRES\tDEVICE\tLAST SEEN");
     for row in rows {
-        let (id, customer, status, suffix, _created, expires, device, last_seen) = row?;
+        let (id, customer, status, suffix, _created, duration_days, expires, device, last_seen) =
+            row?;
+        let expiration = match (expires.as_deref(), duration_days) {
+            (Some(value), _) => value.to_string(),
+            (None, Some(days)) => format!("{days} days after activation"),
+            (None, None) => "lifetime".to_string(),
+        };
         println!(
             "{id}\t{status}\t***{suffix}\t{customer}\t{}\t{}\t{}",
-            expires.as_deref().unwrap_or("lifetime"),
+            expiration,
             device
                 .as_deref()
                 .map(|value| &value[..12])
@@ -737,42 +787,49 @@ fn extend_license(
         return Err("use --days or --lifetime".into());
     }
     let database = open_database(database_path)?;
-    let current_expiration: Option<Option<String>> = database
+    let current: Option<(Option<i64>, Option<String>, Option<String>)> = database
         .query_row(
-            "SELECT expires_at FROM licenses WHERE id = ?1",
+            "SELECT duration_days, expires_at, activated_at FROM licenses WHERE id = ?1",
             [id],
-            |row| row.get(0),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         )
         .optional()?;
-    let current_expiration =
-        current_expiration.ok_or_else(|| format!("license not found: {id}"))?;
-    let next_expiration = if lifetime {
-        None
+    let (current_duration, current_expiration, activated_at) =
+        current.ok_or_else(|| format!("license not found: {id}"))?;
+    let (next_duration, next_expiration) = if lifetime {
+        (None, None)
     } else {
         let days = days.ok_or("use --days or --lifetime")?;
         if days < 1 {
             return Err("days must be at least 1".into());
         }
-        let base = current_expiration
-            .as_deref()
-            .map(parse_timestamp)
-            .transpose()?
-            .filter(|value| *value > Utc::now())
-            .unwrap_or_else(Utc::now);
-        Some(timestamp(base + Duration::days(days)))
+        if activated_at.is_none() {
+            (Some(current_duration.unwrap_or(0) + days), None)
+        } else {
+            let base = current_expiration
+                .as_deref()
+                .map(parse_timestamp)
+                .transpose()?
+                .filter(|value| *value > Utc::now())
+                .unwrap_or_else(Utc::now);
+            (
+                current_duration,
+                Some(timestamp(base + Duration::days(days))),
+            )
+        }
     };
     database.execute(
-        "UPDATE licenses SET expires_at = ?1, status = 'active' WHERE id = ?2",
-        params![next_expiration, id],
+        "UPDATE licenses SET duration_days = ?1, expires_at = ?2, status = 'active' WHERE id = ?3",
+        params![next_duration, next_expiration, id],
     )?;
     println!("updated expiration for {id}");
     Ok(())
 }
 
-fn expiration(
+fn license_duration(
     days: Option<i64>,
     lifetime: bool,
-) -> Result<Option<DateTime<Utc>>, Box<dyn std::error::Error>> {
+) -> Result<Option<i64>, Box<dyn std::error::Error>> {
     if lifetime {
         return Ok(None);
     }
@@ -780,7 +837,7 @@ fn expiration(
     if days < 1 {
         return Err("days must be at least 1".into());
     }
-    Ok(Some(Utc::now() + Duration::days(days)))
+    Ok(Some(days))
 }
 
 fn require_changed(changed: usize, id: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -820,6 +877,13 @@ async fn shutdown_signal() {
 mod tests {
     use super::*;
 
+    fn test_database_path(name: &str) -> PathBuf {
+        std::env::temp_dir().join(format!(
+            "wfmarkettracker-{name}-{}.sqlite3",
+            random_characters(12)
+        ))
+    }
+
     #[test]
     fn activation_keys_are_normalized_before_hashing() {
         assert_eq!(
@@ -850,5 +914,139 @@ mod tests {
         );
         assert!(verify_lease_signature(&token, signing_key.verifying_key()).is_ok());
         assert!(verify_lease_signature(&format!("{token}x"), signing_key.verifying_key()).is_err());
+    }
+
+    #[tokio::test]
+    async fn timed_license_starts_when_first_activated() {
+        let path = test_database_path("activation");
+        let license_key = "WFMK-TEST-TEST-TEST-TEST-TEST";
+        let database = open_database(&path).unwrap();
+        database
+            .execute(
+                "INSERT INTO licenses
+                 (id, key_hash, key_suffix, customer, created_at, duration_days)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![
+                    "LIC-test",
+                    activation_key_hash(license_key),
+                    "TEST",
+                    "Test customer",
+                    timestamp(Utc::now() - Duration::days(10)),
+                    1
+                ],
+            )
+            .unwrap();
+        let state = AppState {
+            database: Arc::new(Mutex::new(database)),
+            signing_key: Arc::new(SigningKey::generate(&mut OsRng)),
+            lease_hours: 72,
+        };
+        let before = Utc::now();
+
+        let response = activate(
+            State(state.clone()),
+            Json(ActivateRequest {
+                license_key: license_key.into(),
+                device_id: "a".repeat(64),
+                app_version: "1.7.0".into(),
+            }),
+        )
+        .await
+        .unwrap()
+        .0;
+
+        let expiration = parse_timestamp(response.details.expires_at.as_deref().unwrap()).unwrap();
+        assert!(expiration >= before + Duration::days(1) - Duration::seconds(1));
+        assert!(expiration <= Utc::now() + Duration::days(1));
+        assert_eq!(response.offline_until, timestamp(expiration));
+        drop(state);
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn migration_defers_only_unused_legacy_licenses() {
+        let path = test_database_path("migration");
+        let database = Connection::open(&path).unwrap();
+        database
+            .execute_batch(
+                "CREATE TABLE licenses (
+                    id TEXT PRIMARY KEY,
+                    key_hash TEXT NOT NULL UNIQUE,
+                    key_suffix TEXT NOT NULL,
+                    customer TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'active',
+                    created_at TEXT NOT NULL,
+                    expires_at TEXT,
+                    device_id TEXT,
+                    activated_at TEXT,
+                    last_seen_at TEXT
+                );",
+            )
+            .unwrap();
+        let created_at = Utc::now() - Duration::days(2);
+        let expires_at = created_at + Duration::days(30);
+        for (id, device_id, activated_at) in [
+            ("LIC-unused", None, None),
+            (
+                "LIC-active",
+                Some("a".repeat(64)),
+                Some(timestamp(created_at)),
+            ),
+        ] {
+            database
+                .execute(
+                    "INSERT INTO licenses
+                     (id, key_hash, key_suffix, customer, created_at, expires_at, device_id, activated_at)
+                     VALUES (?1, ?2, 'TEST', 'Test', ?3, ?4, ?5, ?6)",
+                    params![
+                        id,
+                        format!("hash-{id}"),
+                        timestamp(created_at),
+                        timestamp(expires_at),
+                        device_id,
+                        activated_at
+                    ],
+                )
+                .unwrap();
+        }
+        drop(database);
+
+        let migrated = open_database(&path).unwrap();
+        let unused: (Option<i64>, Option<String>) = migrated
+            .query_row(
+                "SELECT duration_days, expires_at FROM licenses WHERE id = 'LIC-unused'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        let active: (Option<i64>, Option<String>) = migrated
+            .query_row(
+                "SELECT duration_days, expires_at FROM licenses WHERE id = 'LIC-active'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+
+        assert_eq!(unused, (Some(30), None));
+        assert_eq!(active, (Some(30), Some(timestamp(expires_at))));
+        migrated
+            .execute(
+                "UPDATE licenses SET device_id = NULL, activated_at = NULL WHERE id = 'LIC-active'",
+                [],
+            )
+            .unwrap();
+        drop(migrated);
+
+        let reopened = open_database(&path).unwrap();
+        let expiration_after_device_reset: Option<String> = reopened
+            .query_row(
+                "SELECT expires_at FROM licenses WHERE id = 'LIC-active'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(expiration_after_device_reset, Some(timestamp(expires_at)));
+        drop(reopened);
+        let _ = fs::remove_file(path);
     }
 }

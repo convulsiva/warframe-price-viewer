@@ -40,6 +40,8 @@ wfm-license create \
 
 The activation key is displayed once. Send the `WFMK-...` value to the customer. The database stores only its SHA-256 hash, so a lost activation key cannot be recovered.
 
+For timed licenses, `--days` is the subscription length. The countdown starts when the key is first activated, not when it is created, so unused keys can be prepared in advance.
+
 ## Manage licenses
 
 List licenses:
@@ -77,6 +79,7 @@ Resetting a device does not reveal or replace the original activation key. Gener
 ## Application behavior
 
 - Activation binds the key to a privacy-preserving hash derived from the computer identity.
+- A timed license receives its expiration date on first activation. Creating an unused key does not start its countdown.
 - Reusing the key on the same computer is allowed after reinstalling the application.
 - Reusing it on another computer is rejected until the owner resets the device binding.
 - The application checks the signed lease locally at every startup.

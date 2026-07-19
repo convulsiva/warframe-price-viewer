@@ -5,6 +5,7 @@ import type { FavoriteSnapshot, MarketOrder } from "../../domain/models";
 import { config } from "../../lib/config";
 import { formatPlatinum } from "../../lib/format";
 import { sendDesktopNotification } from "../../lib/notifications";
+import { useLicenseStore } from "../license/store";
 import { useLibraryStore } from "./store";
 
 const PRICE_ALERT_ACTION_TYPE = "price-alert-actions";
@@ -152,6 +153,7 @@ export function useFavoritePriceAlerts(favorites: FavoriteSnapshot[], online: bo
         const notifications = alertResult.notifications;
         if (notificationsEnabled) {
           for (const notification of notifications) {
+            if (cancelled || useLicenseStore.getState().status !== "valid") return;
             await sendDesktopNotification({
               title: notification.title,
               body: notification.body,

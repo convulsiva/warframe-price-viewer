@@ -92,8 +92,11 @@ jobs:
             exit 1
           fi
 
+          notes_path="release-notes/${GITHUB_REF_NAME}.md"
           previous_tag="$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
-          if [ -n "${previous_tag}" ]; then
+          if [ -f "${notes_path}" ]; then
+            cp "${notes_path}" release-notes.md
+          elif [ -n "${previous_tag}" ]; then
             git log --pretty=format:'- %s' "${previous_tag}..${GITHUB_SHA}" > release-notes.md
           else
             printf '%s\n' "WFMarketTracker ${version}" > release-notes.md

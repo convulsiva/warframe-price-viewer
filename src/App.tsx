@@ -1,5 +1,6 @@
 import { Coins, ExternalLink, Home, RefreshCw, Star, WifiOff } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { isApiError, messageForError } from "./api/errors";
 import { useItemDetailQuery, useItemsQuery, useOrdersQuery, useTopOrdersQuery } from "./api/warframeMarket";
 import type { MarketItem } from "./domain/models";
@@ -22,6 +23,7 @@ import { useOnlineStatus } from "./lib/hooks";
 import { openExternalUrl } from "./lib/openExternal";
 
 export function App() {
+  const queryClient = useQueryClient();
   const online = useOnlineStatus();
   const updater = useAppUpdater();
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
@@ -38,10 +40,23 @@ export function App() {
   const favorites = useLibraryStore((state) => state.favorites);
   const recents = useLibraryStore((state) => state.recents);
   const notificationsEnabled = useSettingsStore((state) => state.notificationsEnabled);
+  const useProxy = useSettingsStore((state) => state.useProxy);
+  const proxyUrl = useSettingsStore((state) => state.proxyUrl);
+  const previousProxy = useRef(`${useProxy}:${proxyUrl.trim()}`);
   const isFavorite = useLibraryStore((state) => (selectedSlug ? state.isFavorite(selectedSlug) : false));
   useCloseToTray();
   useTheme();
   useFavoritePriceAlerts(favorites, online, notificationsEnabled);
+
+  useEffect(() => {
+    const proxy = `${useProxy}:${proxyUrl.trim()}`;
+    if (proxy === previousProxy.current) return;
+    previousProxy.current = proxy;
+    const timer = window.setTimeout(() => {
+      void queryClient.refetchQueries({ type: "active" });
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [proxyUrl, queryClient, useProxy]);
 
   const orders = useMemo(() => {
     if (ordersQuery.data) return ordersQuery.data;

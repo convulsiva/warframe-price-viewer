@@ -1,6 +1,6 @@
 [package]
 name = "wfmarkettracker"
-version = "1.7.0"
+version = "1.7.1"
 description = "Warframe market price tracker"
 authors = ["WFMarketTracker"]
 edition = "2021"

@@ -18,6 +18,7 @@ export function LicenseGate({ children }: { children: ReactNode }) {
   const leaseToken = useLicenseStore((state) => state.leaseToken);
   const status = useLicenseStore((state) => state.status);
   const details = useLicenseStore((state) => state.details);
+  const offlineUntil = useLicenseStore((state) => state.offlineUntil);
   const message = useLicenseStore((state) => state.message);
   const setLease = useLicenseStore((state) => state.setLease);
   const setValidation = useLicenseStore((state) => state.setValidation);
@@ -93,6 +94,29 @@ export function LicenseGate({ children }: { children: ReactNode }) {
       document.removeEventListener("visibilitychange", checkWhenVisible);
     };
   }, [leaseToken, refresh, status]);
+
+  useEffect(() => {
+    if (status !== "valid") return;
+    const expiration = effectiveExpiration(details?.expiresAt ?? null, offlineUntil);
+    if (expiration === null) return;
+
+    const lock = () => {
+      setValidation(
+        "expired",
+        details,
+        "Your license session has ended. Enter a new license to continue.",
+        offlineUntil
+      );
+    };
+    const remaining = expiration - Date.now();
+    if (remaining <= 0) {
+      lock();
+      return;
+    }
+
+    const timer = window.setTimeout(lock, remaining);
+    return () => window.clearTimeout(timer);
+  }, [details, offlineUntil, setValidation, status]);
 
   async function activate(key: string) {
     const normalizedKey = key.trim();
@@ -194,4 +218,12 @@ function ActivationScreen({ status, details, message, onActivate }: ActivationSc
 function formatExpiration(expiresAt: string | null): string {
   if (!expiresAt) return "Lifetime license";
   return `Expired ${new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(expiresAt))}`;
+}
+
+function effectiveExpiration(licenseExpiration: string | null, offlineExpiration: string | null): number | null {
+  const expirations = [licenseExpiration, offlineExpiration]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => Date.parse(value))
+    .filter(Number.isFinite);
+  return expirations.length > 0 ? Math.min(...expirations) : null;
 }

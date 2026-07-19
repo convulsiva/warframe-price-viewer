@@ -42,7 +42,9 @@ export function useItemsQuery() {
       return response.data.map(normalizeItem);
     },
     staleTime: config.itemStaleMs,
-    gcTime: config.itemGcMs
+    gcTime: config.itemGcMs,
+    refetchInterval: (query) => query.state.status === "error" ? 10_000 : false,
+    refetchIntervalInBackground: true
   });
 }
 

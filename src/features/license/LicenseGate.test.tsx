@@ -1,7 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LicenseGate } from "./LicenseGate";
 import { useLicenseStore } from "./store";
 
@@ -29,6 +30,10 @@ describe("LicenseGate", () => {
     Object.defineProperty(window, "__TAURI_INTERNALS__", { configurable: true, value: {} });
     vi.mocked(invoke).mockReset();
     useLicenseStore.setState({ leaseToken: "", status: "checking", details: null, offlineUntil: null, message: "" });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("locks the application until a license is provided", async () => {
@@ -64,5 +69,39 @@ describe("LicenseGate", () => {
     render(<LicenseGate><div>Application content</div></LicenseGate>);
     expect(await screen.findByText(/license has been disabled/i)).toBeInTheDocument();
     expect(screen.queryByText("Application content")).not.toBeInTheDocument();
+  });
+
+  it("locks the application exactly when the local license session expires", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-19T12:00:00.000Z"));
+    const expiration = "2026-07-19T12:00:01.000Z";
+    const expiringVerification = {
+      ...validLicense,
+      details: { ...validLicense.details, expiresAt: expiration },
+      offlineUntil: expiration
+    };
+    const expiringLease = {
+      leaseToken: validLease.leaseToken,
+      details: expiringVerification.details,
+      offlineUntil: expiration
+    };
+    useLicenseStore.setState({ leaseToken: validLease.leaseToken, status: "checking" });
+    vi.mocked(invoke).mockImplementation(async (command) => {
+      if (command === "verify_server_license") return expiringVerification;
+      return expiringLease;
+    });
+
+    render(<LicenseGate><div>Application content</div></LicenseGate>);
+    await act(async () => Promise.resolve());
+    await act(async () => Promise.resolve());
+    expect(screen.getByText("Application content")).toBeInTheDocument();
+
+    await act(async () => {
+      vi.advanceTimersByTime(1_000);
+    });
+
+    expect(screen.queryByText("Application content")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /license required/i })).toBeInTheDocument();
+    expect(useLicenseStore.getState().status).toBe("expired");
   });
 });

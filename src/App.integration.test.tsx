@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
+import { useSettingsStore } from "./features/settings/store";
 import { itemFixture, itemsFixture, ordersFixture, topOrdersFixture } from "./test/fixtures/api";
 
 function mockFetch(status = 200) {
@@ -33,6 +34,10 @@ function renderApp() {
 }
 
 describe("App integration", () => {
+  beforeEach(() => {
+    useSettingsStore.setState({ useProxy: false, proxyUrl: "", notificationsEnabled: true });
+  });
+
   it("searches an item, loads orders, filters, refreshes, and saves favorite", async () => {
     mockFetch();
     renderApp();
@@ -62,6 +67,29 @@ describe("App integration", () => {
     mockFetch(429);
     renderApp();
     expect(await screen.findByText(/rate limit/i)).toBeInTheDocument();
+  });
+
+  it("clears a network error after proxy settings recover", async () => {
+    let itemAttempts = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/items")) {
+        itemAttempts += 1;
+        if (itemAttempts === 1) throw new TypeError("Proxy unavailable");
+        return new Response(JSON.stringify(itemsFixture), {
+          status: 200,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+      return new Response(JSON.stringify({ error: "not found" }), { status: 404 });
+    });
+    renderApp();
+
+    expect(await screen.findByText(/network error/i)).toBeInTheDocument();
+    act(() => useSettingsStore.setState({ useProxy: true, proxyUrl: "host:port:user:password" }));
+
+    await waitFor(() => expect(screen.queryByText(/network error/i)).not.toBeInTheDocument(), { timeout: 2_000 });
+    expect(itemAttempts).toBeGreaterThanOrEqual(2);
   });
 
   it("toggles notifications and closes settings when clicking outside", async () => {
