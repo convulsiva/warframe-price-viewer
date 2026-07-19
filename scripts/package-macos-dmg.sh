@@ -18,6 +18,18 @@ codesign --verify --deep --strict --verbose=2 "${APP_PATH}"
 mkdir -p "${DMG_DIR}"
 rm -f "${DMG_PATH}"
 hdiutil create -volname "WFMarketTracker" -srcfolder "${APP_PATH}" -ov -format UDZO "${DMG_PATH}"
-hdiutil verify "${DMG_PATH}"
+
+for attempt in 1 2 3 4 5; do
+  if hdiutil verify "${DMG_PATH}"; then
+    break
+  fi
+
+  if [[ "${attempt}" == "5" ]]; then
+    echo "Failed to verify ${DMG_PATH} after ${attempt} attempts" >&2
+    exit 1
+  fi
+
+  sleep "$((attempt * 3))"
+done
 
 echo "Created ${DMG_PATH}"
