@@ -7,6 +7,8 @@ import { formatPlatinum } from "../../lib/format";
 import { sendDesktopNotification } from "../../lib/notifications";
 import { useLicenseStore } from "../license/store";
 import { useLibraryStore } from "./store";
+import { usePriceHistoryStore } from "../market/historyStore";
+import { currentLanguage } from "../../lib/i18n";
 
 const PRICE_ALERT_ACTION_TYPE = "price-alert-actions";
 const MAX_ALERTS_PER_FAVORITE_CHECK = 5;
@@ -63,6 +65,7 @@ export function alertsForFavorite(
   favorite: FavoriteSnapshot,
   orders: MarketOrder[]
 ): PriceAlertResult {
+  const russian = currentLanguage() === "ru";
   const alreadyAlerted = new Set(favorite.alertedOrderKeys ?? []);
   const currentlyMatching = new Set<string>();
   const notifications: PriceAlertNotification[] = [];
@@ -82,8 +85,8 @@ export function alertsForFavorite(
       const key = priceAlertKey(favorite, "drop", order);
       if (!alreadyAlerted.has(key)) {
         notifications.push({
-          title: `${favorite.name} price dropped`,
-          body: `${order.user.name} sells for ${formatPlatinum(order.platinum)}. Click to copy whisper.`,
+          title: russian ? `Цена ${favorite.name} снизилась` : `${favorite.name} price dropped`,
+          body: russian ? `${order.user.name} продаёт за ${formatPlatinum(order.platinum)}. Нажмите, чтобы скопировать сообщение.` : `${order.user.name} sells for ${formatPlatinum(order.platinum)}. Click to copy whisper.`,
           command: whisperCommand(favorite.name, order.user.name, order.platinum),
           key
         });
@@ -95,8 +98,8 @@ export function alertsForFavorite(
       const key = priceAlertKey(favorite, "rise", order);
       if (!alreadyAlerted.has(key)) {
         notifications.push({
-          title: `${favorite.name} price increased`,
-          body: `${order.user.name} sells for ${formatPlatinum(order.platinum)}. Click to copy whisper.`,
+          title: russian ? `Цена ${favorite.name} повысилась` : `${favorite.name} price increased`,
+          body: russian ? `${order.user.name} продаёт за ${formatPlatinum(order.platinum)}. Нажмите, чтобы скопировать сообщение.` : `${order.user.name} sells for ${formatPlatinum(order.platinum)}. Click to copy whisper.`,
           command: whisperCommand(favorite.name, order.user.name, order.platinum),
           key
         });
@@ -123,6 +126,7 @@ export function useFavoritePriceAlerts(favorites: FavoriteSnapshot[], online: bo
   const cursorRef = useRef(0);
   const busyRef = useRef(false);
   const updateFavoritePrice = useLibraryStore((state) => state.updateFavoritePrice);
+  const recordPrice = usePriceHistoryStore((state) => state.record);
 
   useEffect(() => {
     favoritesRef.current = favorites;
@@ -149,6 +153,7 @@ export function useFavoritePriceAlerts(favorites: FavoriteSnapshot[], online: bo
         if (cancelled) return;
         const order = lowestIngameSellOrder(orders);
         const nextPrice = order?.platinum ?? null;
+        recordPrice(favorite.slug, config.platform, nextPrice, null);
         const alertResult = alertsForFavorite(favorite, orders);
         const notifications = alertResult.notifications;
         if (notificationsEnabled) {
@@ -184,5 +189,5 @@ export function useFavoritePriceAlerts(favorites: FavoriteSnapshot[], online: bo
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [notificationsEnabled, online, updateFavoritePrice]);
+  }, [notificationsEnabled, online, recordPrice, updateFavoritePrice]);
 }

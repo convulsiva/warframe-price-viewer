@@ -714,7 +714,8 @@ fn list_licenses(database_path: &Path) -> Result<(), Box<dyn std::error::Error>>
     let database = open_database(database_path)?;
     let mut statement = database.prepare(
         "SELECT id, customer, status, key_suffix, created_at, duration_days, expires_at, device_id, last_seen_at
-         FROM licenses ORDER BY created_at DESC",
+         FROM licenses
+         ORDER BY CASE status WHEN 'active' THEN 0 ELSE 1 END, created_at DESC",
     )?;
     let rows = statement.query_map([], |row| {
         Ok((
@@ -729,26 +730,58 @@ fn list_licenses(database_path: &Path) -> Result<(), Box<dyn std::error::Error>>
             row.get::<_, Option<String>>(8)?,
         ))
     })?;
-    println!("ID\tSTATUS\tKEY\tCUSTOMER\tEXPIRES\tDEVICE\tLAST SEEN");
+    const SEPARATOR: &str = "------------------------------------------------------------------------------------------------------------------------";
+    println!(
+        "{:<16}  {:<7}  {:<7}  {:<26}  {:<20}  {:<12}  {:<20}",
+        "ID", "STATUS", "KEY", "CUSTOMER", "PLAN / EXPIRES", "DEVICE", "LAST SEEN"
+    );
+    println!("{SEPARATOR}");
+    let mut total = 0;
+    let mut active = 0;
     for row in rows {
         let (id, customer, status, suffix, _created, duration_days, expires, device, last_seen) =
             row?;
         let expiration = match (expires.as_deref(), duration_days) {
             (Some(value), _) => value.to_string(),
-            (None, Some(days)) => format!("{days} days after activation"),
+            (None, Some(days)) => format!("{days}d after activation"),
             (None, None) => "lifetime".to_string(),
         };
+        let device = device
+            .as_deref()
+            .map(|value| table_cell(value, 12))
+            .unwrap_or_else(|| "unused".to_string());
+        total += 1;
+        if status == "active" {
+            active += 1;
+        }
         println!(
-            "{id}\t{status}\t***{suffix}\t{customer}\t{}\t{}\t{}",
-            expiration,
-            device
-                .as_deref()
-                .map(|value| &value[..12])
-                .unwrap_or("unused"),
-            last_seen.as_deref().unwrap_or("never")
+            "{:<16}  {:<7}  {:<7}  {:<26}  {:<20}  {:<12}  {:<20}",
+            table_cell(&id, 16),
+            table_cell(&status, 7),
+            format!("***{}", table_cell(&suffix, 4)),
+            table_cell(&customer, 26),
+            table_cell(&expiration, 20),
+            device,
+            table_cell(last_seen.as_deref().unwrap_or("never"), 20)
         );
     }
+    println!("{SEPARATOR}");
+    println!(
+        "{total} licenses: {active} active, {} revoked",
+        total - active
+    );
     Ok(())
+}
+
+fn table_cell(value: &str, width: usize) -> String {
+    let length = value.chars().count();
+    if length <= width {
+        return value.to_string();
+    }
+    if width <= 3 {
+        return ".".repeat(width);
+    }
+    format!("{}...", value.chars().take(width - 3).collect::<String>())
 }
 
 fn set_status(
@@ -890,6 +923,13 @@ mod tests {
             activation_key_hash(" wfmk-abcd "),
             activation_key_hash("WFMK-ABCD")
         );
+    }
+
+    #[test]
+    fn table_cells_are_truncated_without_changing_their_width() {
+        assert_eq!(table_cell("short", 8), "short");
+        assert_eq!(table_cell("a-very-long-customer", 12), "a-very-lo...");
+        assert_eq!(table_cell("test", 3), "...");
     }
 
     #[test]

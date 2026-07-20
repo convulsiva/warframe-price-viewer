@@ -15,6 +15,11 @@ test("searches, opens prices, favorites, and persists after reload", async ({ pa
   });
 
   await page.goto("/");
+  const licenseInput = page.getByRole("textbox", { name: "License key" });
+  if (await licenseInput.isVisible()) {
+    await licenseInput.fill("WFMK-E2E-LOCAL-PREVIEW");
+    await page.getByRole("button", { name: "Activate license" }).click();
+  }
   await page.getByRole("combobox").fill("lex");
   await page.getByRole("option", { name: /lex prime set/i }).click();
   await expect(page.getByRole("heading", { name: /lex prime set/i })).toBeVisible();
@@ -23,6 +28,7 @@ test("searches, opens prices, favorites, and persists after reload", async ({ pa
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("button", { name: "Saved" })).toBeVisible();
   await page.reload();
-  await expect(page.getByText("Lex Prime Set").first()).toBeVisible();
-  await expect(page.getByText("5 pt").first()).toBeVisible();
+  await page.getByRole("button", { name: "Favorites" }).click();
+  await expect(page.getByText("Lex Prime Set", { exact: true })).toBeVisible();
+  await expect(page.getByText(/5 pt/)).toBeVisible();
 });

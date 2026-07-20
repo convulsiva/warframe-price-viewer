@@ -11,7 +11,6 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api\/wfm/, ""),
         headers: {
           Accept: "application/json",
-          language: "en",
           platform: "pc",
           crossplay: "true"
         }
@@ -26,7 +25,6 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api\/wfm/, ""),
         headers: {
           Accept: "application/json",
-          language: "en",
           platform: "pc",
           crossplay: "true"
         }

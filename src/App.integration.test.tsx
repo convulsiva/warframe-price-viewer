@@ -55,7 +55,8 @@ describe("App integration", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /save/i }));
     await waitFor(() => expect(screen.getByRole("button", { name: /saved/i })).toBeInTheDocument());
-    expect(screen.getAllByText("Lex Prime Set").length).toBeGreaterThan(1);
+    await userEvent.click(screen.getByRole("button", { name: /^favorites$/i }));
+    expect(screen.getByText("Lex Prime Set")).toBeInTheDocument();
 
     await userEvent.type(screen.getByLabelText(/lex prime set drop alert price/i), "7");
     await userEvent.type(screen.getByLabelText(/lex prime set rise alert price/i), "15");
@@ -96,10 +97,8 @@ describe("App integration", () => {
     mockFetch();
     renderApp();
 
-    const settingsSummary = screen.getByText("Settings");
-    await userEvent.click(settingsSummary);
-    const settingsMenu = settingsSummary.closest("details");
-    expect(settingsMenu).toHaveAttribute("open");
+    await userEvent.click(screen.getByRole("button", { name: /^settings$/i }));
+    expect(screen.getByRole("heading", { name: /settings/i })).toBeInTheDocument();
 
     const notificationsToggle = screen.getByRole("checkbox", { name: /^notifications/i });
     expect(notificationsToggle).toBeChecked();
@@ -107,6 +106,6 @@ describe("App integration", () => {
     expect(notificationsToggle).not.toBeChecked();
 
     await userEvent.click(screen.getByRole("button", { name: /home/i }));
-    expect(settingsMenu).not.toHaveAttribute("open");
+    expect(screen.queryByRole("heading", { name: /settings/i })).not.toBeInTheDocument();
   });
 });

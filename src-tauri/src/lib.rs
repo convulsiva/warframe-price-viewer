@@ -343,17 +343,21 @@ fn verify_license_at(
 }
 
 #[tauri::command]
-async fn fetch_warframe_market(path: String, proxy_url: Option<String>) -> Result<Value, String> {
+async fn fetch_warframe_market(path: String, proxy_url: Option<String>, language: Option<String>) -> Result<Value, String> {
     if !path.starts_with('/') || path.contains("..") || path.contains('\\') {
         return Err("Invalid API path".to_string());
     }
 
     let url = format!("{WARFRAME_MARKET_API_BASE}{path}");
+    let language = match language.as_deref() {
+        Some("ru") => "ru",
+        _ => "en",
+    };
     let client = build_http_client(proxy_url.as_deref())?;
     let response = client
         .get(url)
         .header("Accept", "application/json")
-        .header("language", "en")
+        .header("language", language)
         .header("platform", "pc")
         .header("crossplay", "true")
         .send()

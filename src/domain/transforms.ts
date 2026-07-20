@@ -1,6 +1,7 @@
 import { config } from "../lib/config";
 import type { ApiItem, ApiOrder } from "../api/schemas";
 import type { MarketItem, MarketOrder, MarketUser, UserStatus } from "./models";
+import { currentLanguage } from "../lib/i18n";
 
 function assetUrl(path: string | undefined): string | null {
   if (!path) return null;
@@ -9,25 +10,28 @@ function assetUrl(path: string | undefined): string | null {
 }
 
 function itemType(tags: string[]): string {
-  if (tags.includes("mod")) return "Mod";
-  if (tags.includes("riven")) return "Riven";
-  if (tags.includes("relic")) return "Relic";
-  if (tags.includes("weapon")) return "Weapon";
+  const russian = currentLanguage() === "ru";
+  if (tags.includes("mod")) return russian ? "Мод" : "Mod";
+  if (tags.includes("riven")) return russian ? "Мод разлома" : "Riven";
+  if (tags.includes("relic")) return russian ? "Реликвия" : "Relic";
+  if (tags.includes("weapon")) return russian ? "Оружие" : "Weapon";
   if (tags.includes("warframe")) return "Warframe";
-  if (tags.includes("arcane")) return "Arcane";
-  if (tags.includes("set")) return "Set";
-  return tags[0] ? tags[0].replaceAll("_", " ") : "Item";
+  if (tags.includes("arcane")) return russian ? "Мистификатор" : "Arcane";
+  if (tags.includes("set")) return russian ? "Набор" : "Set";
+  return tags[0] ? tags[0].replaceAll("_", " ") : russian ? "Предмет" : "Item";
 }
 
 export function normalizeItem(item: ApiItem): MarketItem {
-  const preferred = item.i18n[config.language] ?? item.i18n.en ?? Object.values(item.i18n)[0];
+  const preferred = item.i18n[currentLanguage()] ?? item.i18n[config.language] ?? item.i18n.en ?? Object.values(item.i18n)[0];
   const english = item.i18n.en ?? preferred;
   const names = Object.fromEntries(Object.entries(item.i18n).map(([lang, value]) => [lang, value.name]));
+  const searchNames = [...new Set(Object.values(names))];
 
   return {
     id: item.id,
     slug: item.slug,
     names,
+    searchNames,
     name: preferred.name,
     englishName: english.name,
     description: preferred.description ?? english.description ?? null,

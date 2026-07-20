@@ -1,3 +1,5 @@
+import { currentLanguage, translate } from "../lib/i18n";
+
 export type ApiErrorKind =
   | "network"
   | "timeout"
@@ -28,14 +30,15 @@ export function isApiError(error: unknown): error is ApiError {
 }
 
 export function messageForError(error: unknown): string {
-  if (!isApiError(error)) return "Unexpected error. Please try again.";
-  if (error.kind === "rate-limit") return "Warframe.market rate limit reached. Wait a moment before refreshing.";
-  if (error.kind === "connection-limit") return "Too many API connections. The cached data remains visible if available.";
-  if (error.kind === "network") return "Network error. Check your connection or try again later.";
-  if (error.kind === "timeout") return "The API request timed out.";
-  if (error.kind === "not-found") return "The item or endpoint was not found.";
-  if (error.kind === "validation") return "The API returned data in an unexpected shape.";
-  if (error.kind === "server") return "Warframe.market API is unavailable right now.";
-  if (error.kind === "forbidden") return "The API rejected this request.";
+  const language = currentLanguage();
+  if (!isApiError(error)) return translate(language, "apiUnexpected");
+  if (error.kind === "rate-limit") return translate(language, "apiRateLimit");
+  if (error.kind === "connection-limit") return translate(language, "apiConnections");
+  if (error.kind === "network") return translate(language, "apiNetwork");
+  if (error.kind === "timeout") return translate(language, "apiTimeout");
+  if (error.kind === "not-found") return translate(language, "apiNotFound");
+  if (error.kind === "validation") return translate(language, "apiValidation");
+  if (error.kind === "server") return translate(language, "apiServer");
+  if (error.kind === "forbidden") return translate(language, "apiForbidden");
   return error.message;
 }

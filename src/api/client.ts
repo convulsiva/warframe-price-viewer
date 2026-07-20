@@ -9,6 +9,10 @@ type RequestOptions = {
   timeoutMs?: number;
 };
 
+// A Russian manifest includes both Russian and English i18n entries, allowing
+// bilingual search while the selected UI language still controls presentation.
+const MARKET_CONTENT_LANGUAGE = "ru";
+
 function mergeSignals(signals: AbortSignal[]): AbortSignal {
   const controller = new AbortController();
   const abort = () => controller.abort();
@@ -39,7 +43,7 @@ export async function requestJson<T>(
     const response = await fetch(`${config.apiBaseUrl}${path}`, {
       headers: {
         Accept: "application/json",
-        language: config.language,
+        language: MARKET_CONTENT_LANGUAGE,
         platform: config.platform,
         crossplay: String(config.crossplay)
       },
@@ -86,6 +90,7 @@ async function requestJsonFromTauri<T>(path: string, schema: z.ZodSchema<T>): Pr
     const normalizedProxyUrl = useProxy ? proxyUrl.trim() : "";
     const json: unknown = await invoke("fetch_warframe_market", {
       path,
+      language: MARKET_CONTENT_LANGUAGE,
       proxyUrl: normalizedProxyUrl.length > 0 ? normalizedProxyUrl : null
     });
     const parsed = schema.safeParse(json);

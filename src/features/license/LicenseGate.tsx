@@ -9,12 +9,14 @@ import {
   verifyLicenseLease
 } from "./api";
 import { useLicenseStore } from "./store";
+import { useI18n } from "../../lib/i18n";
 
 const LICENSE_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const MINIMUM_FOCUS_REFRESH_MS = 5 * 60 * 1000;
 
 export function LicenseGate({ children }: { children: ReactNode }) {
   useTheme();
+  const { t } = useI18n();
   const leaseToken = useLicenseStore((state) => state.leaseToken);
   const status = useLicenseStore((state) => state.status);
   const details = useLicenseStore((state) => state.details);
@@ -62,7 +64,7 @@ export function LicenseGate({ children }: { children: ReactNode }) {
           setValidation(
             "expired",
             result.details,
-            "Offline access has ended. Connect to the internet to renew your license session.",
+            t("offlineLicenseEnded"),
             result.offlineUntil
           );
         }
@@ -74,7 +76,7 @@ export function LicenseGate({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [leaseToken, refresh, setValidation]);
+  }, [leaseToken, refresh, setValidation, t]);
 
   useEffect(() => {
     if (status !== "valid" || !leaseToken) return;
@@ -104,7 +106,7 @@ export function LicenseGate({ children }: { children: ReactNode }) {
       setValidation(
         "expired",
         details,
-        "Your license session has ended. Enter a new license to continue.",
+        t("licenseSessionEnded"),
         offlineUntil
       );
     };
@@ -116,7 +118,7 @@ export function LicenseGate({ children }: { children: ReactNode }) {
 
     const timer = window.setTimeout(lock, remaining);
     return () => window.clearTimeout(timer);
-  }, [details, offlineUntil, setValidation, status]);
+  }, [details, offlineUntil, setValidation, status, t]);
 
   async function activate(key: string) {
     const normalizedKey = key.trim();
@@ -138,11 +140,12 @@ export function LicenseGate({ children }: { children: ReactNode }) {
 }
 
 function LicenseLoading() {
+  const { t } = useI18n();
   return (
     <main className="license-screen">
       <div className="license-loading" role="status">
         <ShieldCheck size={26} aria-hidden="true" />
-        <span>Checking license...</span>
+        <span>{t("checkingLicense")}</span>
       </div>
     </main>
   );
@@ -156,6 +159,7 @@ type ActivationScreenProps = {
 };
 
 function ActivationScreen({ status, details, message, onActivate }: ActivationScreenProps) {
+  const { language, t } = useI18n();
   const [licenseKey, setLicenseKey] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -174,26 +178,26 @@ function ActivationScreen({ status, details, message, onActivate }: ActivationSc
           <span className="license-mark"><LockKeyhole size={24} aria-hidden="true" /></span>
           <div>
             <p className="eyebrow">WFMarketTracker</p>
-            <h1 id="license-title">License required</h1>
+            <h1 id="license-title">{t("licenseRequired")}</h1>
           </div>
         </div>
 
         <p className="license-intro">
-          {status === "expired" ? "Your access period has ended. Enter a new license to continue." : "Enter your license key to unlock the application."}
+          {status === "expired" ? t("accessEnded") : t("enterLicense")}
         </p>
 
         {status === "expired" && details && (
           <div className="license-expired">
-            <span>Expired license</span>
+            <span>{t("expiredLicense")}</span>
             <strong>{details.licenseId}</strong>
-            <small>{formatExpiration(details.expiresAt)}</small>
+            <small>{formatExpiration(details.expiresAt, language, t)}</small>
           </div>
         )}
 
         {message && <p className="license-error" role="alert">{message}</p>}
 
         <form className="license-form" onSubmit={submit}>
-          <label htmlFor="license-key">License key</label>
+          <label htmlFor="license-key">{t("licenseKey")}</label>
           <textarea
             id="license-key"
             autoCapitalize="off"
@@ -205,19 +209,20 @@ function ActivationScreen({ status, details, message, onActivate }: ActivationSc
           />
           <button className="primary-button" type="submit" disabled={submitting || !licenseKey.trim()}>
             <KeyRound size={17} aria-hidden="true" />
-            {submitting ? "Checking..." : "Activate license"}
+            {submitting ? t("checking") : t("activateLicense")}
           </button>
         </form>
 
-        <p className="license-support">Contact the seller if you need a license or renewal.</p>
+        <p className="license-support">{t("licenseSupport")}</p>
       </section>
     </main>
   );
 }
 
-function formatExpiration(expiresAt: string | null): string {
-  if (!expiresAt) return "Lifetime license";
-  return `Expired ${new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(expiresAt))}`;
+function formatExpiration(expiresAt: string | null, language: "en" | "ru", t: ReturnType<typeof useI18n>["t"]): string {
+  if (!expiresAt) return t("lifetimeLicense");
+  const date = new Intl.DateTimeFormat(language === "ru" ? "ru-RU" : "en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(expiresAt));
+  return t("expiredAt", { date });
 }
 
 function effectiveExpiration(licenseExpiration: string | null, offlineExpiration: string | null): number | null {

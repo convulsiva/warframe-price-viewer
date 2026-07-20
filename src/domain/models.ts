@@ -5,6 +5,7 @@ export type MarketItem = {
   id: string;
   slug: string;
   names: Record<string, string>;
+  searchNames: string[];
   name: string;
   englishName: string;
   description: string | null;
@@ -85,4 +86,10 @@ export type RecentItem = {
   name: string;
   thumbUrl: string | null;
   viewedAt: string;
+};
+
+export type PriceHistoryPoint = {
+  timestamp: string;
+  lowestSell: number;
+  medianSell: number | null;
 };

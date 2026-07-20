@@ -3,6 +3,7 @@ import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type DownloadEvent, type Update } from "@tauri-apps/plugin-updater";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "./store";
+import { currentLanguage } from "../../lib/i18n";
 
 const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
 const INITIAL_UPDATE_CHECK_DELAY_MS = 4000;
@@ -119,7 +120,7 @@ export function useAppUpdater(): AppUpdater {
     dialogOpen,
     downloadProgress,
     errorMessage,
-    releaseNotes: update?.body?.trim() || "This update includes improvements and fixes.",
+    releaseNotes: update?.body?.trim() || (currentLanguage() === "ru" ? "Обновление включает улучшения и исправления." : "This update includes improvements and fixes."),
     status,
     updateVersion: update?.version ?? "",
     checkForUpdates,
@@ -142,13 +143,14 @@ function getUpdaterProxy(): string | undefined {
 }
 
 function readableUpdaterError(error: unknown): string {
+  const russian = currentLanguage() === "ru";
   const message = String(error).replace(/^Error:\s*/i, "");
   if (/valid release json|release json|update endpoint/i.test(message)) {
-    return "Update information is temporarily unavailable. Please try again later.";
+    return russian ? "Информация об обновлении временно недоступна. Попробуйте позже." : "Update information is temporarily unavailable. Please try again later.";
   }
-  if (/404|not found/i.test(message)) return "Update information is not available yet.";
-  if (/network|connect|dns|request|timed out/i.test(message)) return "Could not reach the update service.";
-  return message || "Update check failed.";
+  if (/404|not found/i.test(message)) return russian ? "Информация об обновлении пока недоступна." : "Update information is not available yet.";
+  if (/network|connect|dns|request|timed out/i.test(message)) return russian ? "Не удалось подключиться к сервису обновлений." : "Could not reach the update service.";
+  return message || (russian ? "Не удалось проверить обновления." : "Update check failed.");
 }
 
 function isTauriRuntime(): boolean {

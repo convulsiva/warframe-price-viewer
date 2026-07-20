@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type * as TauriNotificationModule from "@tauri-apps/plugin-notification";
+import { currentLanguage } from "./i18n";
 
 type NotificationPayload = {
   title: string;
@@ -64,7 +65,7 @@ async function registerPriceAlertActions(notification: typeof TauriNotificationM
       actions: [
         {
           id: "copy-whisper",
-          title: "Copy whisper",
+          title: currentLanguage() === "ru" ? "Скопировать сообщение" : "Copy whisper",
           foreground: false
         }
       ]

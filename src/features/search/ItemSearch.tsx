@@ -4,6 +4,7 @@ import type { MarketItem } from "../../domain/models";
 import { searchItems } from "../../domain/search";
 import { config } from "../../lib/config";
 import { useDebouncedValue } from "../../lib/hooks";
+import { useI18n } from "../../lib/i18n";
 
 type ItemSearchProps = {
   items: MarketItem[];
@@ -12,6 +13,7 @@ type ItemSearchProps = {
 };
 
 export function ItemSearch({ items, loading, onSelect }: ItemSearchProps) {
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -33,7 +35,7 @@ export function ItemSearch({ items, loading, onSelect }: ItemSearchProps) {
   return (
     <div className="search-shell">
       <label className="search-label" htmlFor="item-search">
-        Item search
+        {t("itemSearch")}
       </label>
       <div className="search-input-wrap">
         <Search aria-hidden="true" size={20} />
@@ -68,13 +70,13 @@ export function ItemSearch({ items, loading, onSelect }: ItemSearchProps) {
           aria-expanded={shouldShowResults && results.length > 0}
           aria-controls="item-results"
           aria-activedescendant={results[activeIndex] ? `item-result-${results[activeIndex].slug}` : undefined}
-          placeholder="Search item name"
+          placeholder={t("searchItemName")}
           autoComplete="off"
         />
       </div>
-      <div id="item-results" className={shouldShowResults ? "search-results open" : "search-results"} role="listbox" aria-label="Search results">
-        {loading && <div className="search-empty">Loading item manifest...</div>}
-        {shouldShowResults && !loading && results.length === 0 && <div className="search-empty">No matching items found</div>}
+      <div id="item-results" className={shouldShowResults ? "search-results open" : "search-results"} role="listbox" aria-label={t("searchResults")}>
+        {loading && <div className="search-empty">{t("loadingManifest")}</div>}
+        {shouldShowResults && !loading && results.length === 0 && <div className="search-empty">{t("noMatchingItems")}</div>}
         {shouldShowResults && results.slice(0, 10).map((item, index) => (
           <button
             id={`item-result-${item.slug}`}
@@ -89,11 +91,20 @@ export function ItemSearch({ items, loading, onSelect }: ItemSearchProps) {
             {item.thumbUrl && <img src={item.thumbUrl} alt="" />}
             <span>
               <strong>{item.name}</strong>
-              <small>{item.englishName !== item.name ? item.englishName : item.type}</small>
+              <small>{searchResultSubtitle(item, debouncedQuery)}</small>
             </span>
           </button>
         ))}
       </div>
     </div>
   );
+}
+
+function searchResultSubtitle(item: MarketItem, query: string): string {
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const matchedName = item.searchNames.find(
+    (name) => name !== item.name && name.toLocaleLowerCase().includes(normalizedQuery)
+  );
+  if (matchedName) return matchedName;
+  return item.englishName !== item.name ? item.englishName : item.type;
 }

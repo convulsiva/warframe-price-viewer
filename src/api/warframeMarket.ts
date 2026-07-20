@@ -8,6 +8,7 @@ import {
   ordersResponseSchema,
   topOrdersResponseSchema
 } from "./schemas";
+import { useSettingsStore } from "../features/settings/store";
 
 export const queryKeys = {
   items: ["items"] as const,
@@ -35,8 +36,9 @@ export async function fetchOrders(slug: string, signal?: AbortSignal) {
 }
 
 export function useItemsQuery() {
+  const language = useSettingsStore((state) => state.language);
   return useQuery({
-    queryKey: queryKeys.items,
+    queryKey: [...queryKeys.items, language],
     queryFn: async ({ signal }) => {
       const response = await requestJson("/items", itemsResponseSchema, { signal });
       return response.data.map(normalizeItem);
@@ -49,8 +51,9 @@ export function useItemsQuery() {
 }
 
 export function useItemDetailQuery(slug: string | null) {
+  const language = useSettingsStore((state) => state.language);
   return useQuery({
-    queryKey: slug ? queryKeys.item(slug) : ["item", "none"],
+    queryKey: slug ? [...queryKeys.item(slug), language] : ["item", "none", language],
     queryFn: async ({ signal }) => {
       if (!slug) throw new Error("Missing item slug");
       return fetchItemDetail(slug, signal);

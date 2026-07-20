@@ -1,6 +1,6 @@
 {
   "name": "warframe-price-viewer",
-  "version": "1.7.1",
+  "version": "1.8.0",
   "description": "Warframe market price viewer",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
@@ -45,6 +45,7 @@
     "lucide-react": "^1.24.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "recharts": "^3.9.2",
     "vite": "^8.1.4",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
