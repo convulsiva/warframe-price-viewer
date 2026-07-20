@@ -8,7 +8,6 @@ import { sendDesktopNotification } from "../../lib/notifications";
 import { useLicenseStore } from "../license/store";
 import { useLibraryStore } from "./store";
 import { usePriceHistoryStore } from "../market/historyStore";
-import { currentLanguage } from "../../lib/i18n";
 
 const PRICE_ALERT_ACTION_TYPE = "price-alert-actions";
 const MAX_ALERTS_PER_FAVORITE_CHECK = 5;
@@ -65,7 +64,7 @@ export function alertsForFavorite(
   favorite: FavoriteSnapshot,
   orders: MarketOrder[]
 ): PriceAlertResult {
-  const russian = currentLanguage() === "ru";
+  const itemName = favorite.englishName ?? favorite.name;
   const alreadyAlerted = new Set(favorite.alertedOrderKeys ?? []);
   const currentlyMatching = new Set<string>();
   const notifications: PriceAlertNotification[] = [];
@@ -85,9 +84,9 @@ export function alertsForFavorite(
       const key = priceAlertKey(favorite, "drop", order);
       if (!alreadyAlerted.has(key)) {
         notifications.push({
-          title: russian ? `Цена ${favorite.name} снизилась` : `${favorite.name} price dropped`,
-          body: russian ? `${order.user.name} продаёт за ${formatPlatinum(order.platinum)}. Нажмите, чтобы скопировать сообщение.` : `${order.user.name} sells for ${formatPlatinum(order.platinum)}. Click to copy whisper.`,
-          command: whisperCommand(favorite.name, order.user.name, order.platinum),
+          title: `${itemName} price dropped`,
+          body: `${order.user.name} sells for ${formatPlatinum(order.platinum)}. Click to copy whisper.`,
+          command: whisperCommand(itemName, order.user.name, order.platinum),
           key
         });
         alreadyAlerted.add(key);
@@ -98,9 +97,9 @@ export function alertsForFavorite(
       const key = priceAlertKey(favorite, "rise", order);
       if (!alreadyAlerted.has(key)) {
         notifications.push({
-          title: russian ? `Цена ${favorite.name} повысилась` : `${favorite.name} price increased`,
-          body: russian ? `${order.user.name} продаёт за ${formatPlatinum(order.platinum)}. Нажмите, чтобы скопировать сообщение.` : `${order.user.name} sells for ${formatPlatinum(order.platinum)}. Click to copy whisper.`,
-          command: whisperCommand(favorite.name, order.user.name, order.platinum),
+          title: `${itemName} price increased`,
+          body: `${order.user.name} sells for ${formatPlatinum(order.platinum)}. Click to copy whisper.`,
+          command: whisperCommand(itemName, order.user.name, order.platinum),
           key
         });
         alreadyAlerted.add(key);

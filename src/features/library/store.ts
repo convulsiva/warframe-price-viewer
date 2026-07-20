@@ -9,6 +9,7 @@ type LibraryState = {
   removeFavorite: (slug: string) => void;
   isFavorite: (slug: string) => boolean;
   updateFavoriteAlert: (slug: string, direction: "drop" | "rise", price: number | null) => void;
+  updateFavoriteEnglishName: (slug: string, englishName: string) => void;
   updateFavoritePrice: (slug: string, price: number | null, alerted?: boolean, alertedOrderKeys?: string[]) => void;
   addRecent: (item: MarketItem) => void;
   removeRecent: (slug: string) => void;
@@ -26,6 +27,7 @@ export const useLibraryStore = create<LibraryState>()(
         const snapshot: FavoriteSnapshot = {
           slug: item.slug,
           name: item.name,
+          englishName: item.englishName,
           thumbUrl: item.thumbUrl,
           lastPrice,
           previousPrice: existing?.lastPrice ?? null,
@@ -51,6 +53,14 @@ export const useLibraryStore = create<LibraryState>()(
                   alertDropPrice: direction === "drop" ? price : favorite.alertDropPrice,
                   alertRisePrice: direction === "rise" ? price : favorite.alertRisePrice
                 }
+              : favorite
+          )
+        })),
+      updateFavoriteEnglishName: (slug, englishName) =>
+        set((state) => ({
+          favorites: state.favorites.map((favorite) =>
+            favorite.slug === slug && favorite.englishName !== englishName
+              ? { ...favorite, englishName }
               : favorite
           )
         })),

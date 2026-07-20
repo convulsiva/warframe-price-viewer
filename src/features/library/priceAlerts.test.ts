@@ -66,6 +66,19 @@ describe("price alerts", () => {
     );
   });
 
+  it("uses the English item name and English copy for notifications", () => {
+    const result = alertsForFavorite(
+      favorite({ name: "Набор Лекс Прайм", englishName: "Lex Prime Set" }),
+      [order({ id: "english-alert", platinum: 5 })]
+    );
+
+    expect(result.notifications[0]).toMatchObject({
+      title: "Lex Prime Set price dropped",
+      body: "Seller sells for 5 pt. Click to copy whisper.",
+      command: '/w Seller Hi! I want to buy: "Lex Prime Set" for 5 platinum. (warframe.market)'
+    });
+  });
+
   it("creates separate drop alerts for multiple new matching ingame sellers", () => {
     const result = alertsForFavorite(favorite(), [
       order({ id: "seller-a", platinum: 5, user: { ...baseUser, id: "a", name: "SellerA" } }),

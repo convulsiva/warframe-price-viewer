@@ -71,6 +71,7 @@ export type MarketSummary = {
 export type FavoriteSnapshot = {
   slug: string;
   name: string;
+  englishName?: string;
   thumbUrl: string | null;
   lastPrice: number | null;
   previousPrice: number | null;

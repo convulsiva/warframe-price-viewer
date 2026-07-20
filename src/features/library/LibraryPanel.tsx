@@ -4,6 +4,7 @@ import type { FavoriteSnapshot, MarketItem } from "../../domain/models";
 import { formatPlatinum } from "../../lib/format";
 import { useLibraryStore } from "./store";
 import { useI18n } from "../../lib/i18n";
+import { sortFavorites, type FavoriteSort } from "./favoriteSort";
 
 type Props = {
   onOpen: (slug: string) => void;
@@ -11,21 +12,13 @@ type Props = {
   view: "favorites" | "recent";
 };
 
-type FavoriteSort = "added" | "name" | "price";
-
 export function FavoritesPanel({ onOpen }: { onOpen: (slug: string) => void }) {
   const { language, t } = useI18n();
   const favorites = useLibraryStore((state) => state.favorites);
   const removeFavorite = useLibraryStore((state) => state.removeFavorite);
   const updateFavoriteAlert = useLibraryStore((state) => state.updateFavoriteAlert);
-  const [sort, setSort] = useState<FavoriteSort>("added");
-  const sortedFavorites = useMemo(() => {
-    return [...favorites].sort((a, b) => {
-      if (sort === "name") return a.name.localeCompare(b.name, language === "ru" ? "ru" : "en");
-      if (sort === "price") return (a.lastPrice ?? Number.MAX_SAFE_INTEGER) - (b.lastPrice ?? Number.MAX_SAFE_INTEGER);
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-    });
-  }, [favorites, language, sort]);
+  const [sort, setSort] = useState<FavoriteSort>("added-newest");
+  const sortedFavorites = useMemo(() => sortFavorites(favorites, sort, language), [favorites, language, sort]);
 
   return (
     <section className="favorites-page full-page-panel">
@@ -38,9 +31,12 @@ export function FavoritesPanel({ onOpen }: { onOpen: (slug: string) => void }) {
         <label className="favorites-sort-control">
           <span>{t("sort")}</span>
           <select value={sort} onChange={(event) => setSort(event.target.value as FavoriteSort)}>
-            <option value="added">{t("timeAdded")}</option>
-            <option value="name">{t("name")}</option>
-            <option value="price">{t("sortPrice")}</option>
+            <option value="added-newest">{t("newestAdded")}</option>
+            <option value="added-oldest">{t("oldestAdded")}</option>
+            <option value="name-ascending">{t("nameAscending")}</option>
+            <option value="name-descending">{t("nameDescending")}</option>
+            <option value="price-ascending">{t("priceAscending")}</option>
+            <option value="price-descending">{t("priceDescending")}</option>
           </select>
         </label>
       </header>
