@@ -1,10 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { act } from "react";
+import { act, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LicenseGate } from "./LicenseGate";
 import { useLicenseStore } from "./store";
+import { useSettingsStore } from "../settings/store";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 
@@ -32,6 +33,7 @@ describe("LicenseGate", () => {
     Object.defineProperty(window, "__TAURI_INTERNALS__", { configurable: true, value: {} });
     vi.mocked(invoke).mockReset();
     useLicenseStore.setState({ leaseToken: "", status: "checking", details: null, offlineUntil: null, message: "" });
+    useSettingsStore.setState({ language: "en" });
   });
 
   afterEach(() => {
@@ -105,5 +107,28 @@ describe("LicenseGate", () => {
     expect(screen.queryByText("Application content")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /license required/i })).toBeInTheDocument();
     expect(useLicenseStore.getState().status).toBe("expired");
+  });
+
+  it("keeps application state mounted when the language changes", async () => {
+    useLicenseStore.setState({ leaseToken: validLease.leaseToken, status: "checking" });
+    vi.mocked(invoke).mockImplementation(async (command) => {
+      if (command === "verify_server_license") return validLicense;
+      return validLease;
+    });
+
+    function StatefulContent() {
+      const [count, setCount] = useState(0);
+      return <button type="button" onClick={() => setCount((value) => value + 1)}>Count {count}</button>;
+    }
+
+    render(<LicenseGate><StatefulContent /></LicenseGate>);
+    await userEvent.click(await screen.findByRole("button", { name: "Count 0" }));
+    expect(screen.getByRole("button", { name: "Count 1" })).toBeInTheDocument();
+    const callsBeforeLanguageChange = vi.mocked(invoke).mock.calls.length;
+
+    act(() => useSettingsStore.getState().setLanguage("ru"));
+
+    expect(screen.getByRole("button", { name: "Count 1" })).toBeInTheDocument();
+    expect(vi.mocked(invoke)).toHaveBeenCalledTimes(callsBeforeLanguageChange);
   });
 });

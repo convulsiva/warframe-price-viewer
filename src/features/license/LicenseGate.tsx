@@ -25,6 +25,11 @@ export function LicenseGate({ children }: { children: ReactNode }) {
   const setLease = useLicenseStore((state) => state.setLease);
   const setValidation = useLicenseStore((state) => state.setValidation);
   const lastRefreshAttempt = useRef(0);
+  const translationRef = useRef(t);
+
+  useEffect(() => {
+    translationRef.current = t;
+  }, [t]);
 
   const refresh = useCallback(async (token: string): Promise<"ok" | "offline" | "rejected"> => {
     lastRefreshAttempt.current = Date.now();
@@ -64,7 +69,7 @@ export function LicenseGate({ children }: { children: ReactNode }) {
           setValidation(
             "expired",
             result.details,
-            t("offlineLicenseEnded"),
+            translationRef.current("offlineLicenseEnded"),
             result.offlineUntil
           );
         }
@@ -76,7 +81,7 @@ export function LicenseGate({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [leaseToken, refresh, setValidation, t]);
+  }, [leaseToken, refresh, setValidation]);
 
   useEffect(() => {
     if (status !== "valid" || !leaseToken) return;
