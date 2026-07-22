@@ -1,3 +1,5 @@
+import type { ItemCategory } from "./itemCategory";
+
 export type OrderType = "buy" | "sell";
 export type UserStatus = "offline" | "online" | "ingame";
 
@@ -72,6 +74,7 @@ export type FavoriteSnapshot = {
   slug: string;
   name: string;
   englishName?: string;
+  category?: ItemCategory;
   thumbUrl: string | null;
   lastPrice: number | null;
   previousPrice: number | null;

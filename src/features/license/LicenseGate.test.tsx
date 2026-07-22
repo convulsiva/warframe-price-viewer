@@ -8,15 +8,17 @@ import { useLicenseStore } from "./store";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 
+const validUntil = new Date(Date.now() + 60_000).toISOString();
+
 const validLicense = {
   status: "valid" as const,
   details: {
     licenseId: "WFM-TEST",
     customer: "test@example.com",
     issuedAt: "2026-01-01T00:00:00.000Z",
-    expiresAt: "2027-01-01T00:00:00.000Z"
+    expiresAt: validUntil
   },
-  offlineUntil: "2026-07-22T00:00:00.000Z"
+  offlineUntil: validUntil
 };
 
 const validLease = {

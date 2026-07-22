@@ -45,7 +45,7 @@ export function App() {
   const ordersQuery = useOrdersQuery(selectedSlug, online);
   const addRecent = useLibraryStore((state) => state.addRecent);
   const addFavorite = useLibraryStore((state) => state.addFavorite);
-  const updateFavoriteEnglishName = useLibraryStore((state) => state.updateFavoriteEnglishName);
+  const syncFavoriteMetadata = useLibraryStore((state) => state.syncFavoriteMetadata);
   const removeFavorite = useLibraryStore((state) => state.removeFavorite);
   const favorites = useLibraryStore((state) => state.favorites);
   const recents = useLibraryStore((state) => state.recents);
@@ -64,14 +64,8 @@ export function App() {
 
   useEffect(() => {
     if (!itemsQuery.data) return;
-    const englishNames = new Map(itemsQuery.data.map((entry) => [entry.slug, entry.englishName]));
-    for (const favorite of favorites) {
-      const englishName = englishNames.get(favorite.slug);
-      if (englishName && favorite.englishName !== englishName) {
-        updateFavoriteEnglishName(favorite.slug, englishName);
-      }
-    }
-  }, [favorites, itemsQuery.data, updateFavoriteEnglishName]);
+    syncFavoriteMetadata(itemsQuery.data);
+  }, [itemsQuery.data, syncFavoriteMetadata]);
 
   useEffect(() => {
     document.documentElement.lang = language;

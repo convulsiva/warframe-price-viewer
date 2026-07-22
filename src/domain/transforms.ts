@@ -2,6 +2,7 @@ import { config } from "../lib/config";
 import type { ApiItem, ApiOrder } from "../api/schemas";
 import type { MarketItem, MarketOrder, MarketUser, UserStatus } from "./models";
 import { currentLanguage } from "../lib/i18n";
+import { itemCategoryFromTags } from "./itemCategory";
 
 function assetUrl(path: string | undefined): string | null {
   if (!path) return null;
@@ -11,14 +12,11 @@ function assetUrl(path: string | undefined): string | null {
 
 function itemType(tags: string[]): string {
   const russian = currentLanguage() === "ru";
-  if (tags.includes("mod")) return russian ? "Мод" : "Mod";
-  if (tags.includes("riven")) return russian ? "Мод разлома" : "Riven";
-  if (tags.includes("relic")) return russian ? "Реликвия" : "Relic";
-  if (tags.includes("weapon")) return russian ? "Оружие" : "Weapon";
-  if (tags.includes("warframe")) return "Warframe";
-  if (tags.includes("arcane")) return russian ? "Мистификатор" : "Arcane";
-  if (tags.includes("set")) return russian ? "Набор" : "Set";
-  return tags[0] ? tags[0].replaceAll("_", " ") : russian ? "Предмет" : "Item";
+  const category = itemCategoryFromTags(tags);
+  const labels = russian
+    ? { weapon: "Оружие", warframe: "Warframe", mod: "Мод", relic: "Реликвия", arcane: "Мистификатор", companion: "Компаньон", cosmetic: "Косметика", resource: "Ресурс", set: "Набор", other: "Предмет" }
+    : { weapon: "Weapon", warframe: "Warframe", mod: "Mod", relic: "Relic", arcane: "Arcane", companion: "Companion", cosmetic: "Cosmetic", resource: "Resource", set: "Set", other: "Item" };
+  return labels[category];
 }
 
 export function normalizeItem(item: ApiItem): MarketItem {

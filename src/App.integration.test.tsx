@@ -56,6 +56,7 @@ describe("App integration", () => {
     await userEvent.click(screen.getByRole("button", { name: /save/i }));
     await waitFor(() => expect(screen.getByRole("button", { name: /saved/i })).toBeInTheDocument());
     await userEvent.click(screen.getByRole("button", { name: /^favorites$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /weapons.*1 item/i }));
     expect(screen.getByText("Lex Prime Set")).toBeInTheDocument();
 
     await userEvent.type(screen.getByLabelText(/lex prime set drop alert price/i), "7");

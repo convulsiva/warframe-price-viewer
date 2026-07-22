@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { FavoriteSnapshot, MarketItem, MarketSummary, RecentItem } from "../../domain/models";
+import { itemCategoryFromTags } from "../../domain/itemCategory";
 
 type LibraryState = {
   favorites: FavoriteSnapshot[];
@@ -9,7 +10,7 @@ type LibraryState = {
   removeFavorite: (slug: string) => void;
   isFavorite: (slug: string) => boolean;
   updateFavoriteAlert: (slug: string, direction: "drop" | "rise", price: number | null) => void;
-  updateFavoriteEnglishName: (slug: string, englishName: string) => void;
+  syncFavoriteMetadata: (items: MarketItem[]) => void;
   updateFavoritePrice: (slug: string, price: number | null, alerted?: boolean, alertedOrderKeys?: string[]) => void;
   addRecent: (item: MarketItem) => void;
   removeRecent: (slug: string) => void;
@@ -28,6 +29,7 @@ export const useLibraryStore = create<LibraryState>()(
           slug: item.slug,
           name: item.name,
           englishName: item.englishName,
+          category: itemCategoryFromTags(item.tags),
           thumbUrl: item.thumbUrl,
           lastPrice,
           previousPrice: existing?.lastPrice ?? null,
@@ -56,14 +58,22 @@ export const useLibraryStore = create<LibraryState>()(
               : favorite
           )
         })),
-      updateFavoriteEnglishName: (slug, englishName) =>
-        set((state) => ({
-          favorites: state.favorites.map((favorite) =>
-            favorite.slug === slug && favorite.englishName !== englishName
-              ? { ...favorite, englishName }
-              : favorite
-          )
-        })),
+      syncFavoriteMetadata: (items) =>
+        set((state) => {
+          const metadata = new Map(items.map((item) => [item.slug, item]));
+          let changed = false;
+          const favorites = state.favorites.map((favorite) => {
+            const item = metadata.get(favorite.slug);
+            if (!item) return favorite;
+            const category = itemCategoryFromTags(item.tags);
+            if (favorite.name === item.name && favorite.englishName === item.englishName && favorite.category === category) {
+              return favorite;
+            }
+            changed = true;
+            return { ...favorite, name: item.name, englishName: item.englishName, category };
+          });
+          return changed ? { favorites } : state;
+        }),
       updateFavoritePrice: (slug, price, alerted = false, alertedOrderKeys) =>
         set((state) => ({
           favorites: state.favorites.map((favorite) =>

@@ -1,6 +1,8 @@
-import { ChevronDown, SlidersHorizontal, Star, Trash2, X } from "lucide-react";
+import { Bot, Boxes, ChevronDown, Disc3, Gem, Package, Palette, ScrollText, Shield, SlidersHorizontal, Sparkles, Star, Sword, Trash2, X } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { FavoriteSnapshot, MarketItem } from "../../domain/models";
+import { itemCategoryOrder, type ItemCategory } from "../../domain/itemCategory";
 import { formatPlatinum } from "../../lib/format";
 import { useLibraryStore } from "./store";
 import { useI18n } from "../../lib/i18n";
@@ -13,12 +15,16 @@ type Props = {
 };
 
 export function FavoritesPanel({ onOpen }: { onOpen: (slug: string) => void }) {
-  const { language, t } = useI18n();
+  const { t } = useI18n();
   const favorites = useLibraryStore((state) => state.favorites);
   const removeFavorite = useLibraryStore((state) => state.removeFavorite);
   const updateFavoriteAlert = useLibraryStore((state) => state.updateFavoriteAlert);
-  const [sort, setSort] = useState<FavoriteSort>("added-newest");
-  const sortedFavorites = useMemo(() => sortFavorites(favorites, sort, language), [favorites, language, sort]);
+  const groups = useMemo(
+    () => itemCategoryOrder
+      .map((category) => ({ category, favorites: favorites.filter((favorite) => (favorite.category ?? "other") === category) }))
+      .filter((group) => group.favorites.length > 0),
+    [favorites]
+  );
 
   return (
     <section className="favorites-page full-page-panel">
@@ -28,9 +34,76 @@ export function FavoritesPanel({ onOpen }: { onOpen: (slug: string) => void }) {
           <h2><Star size={20} aria-hidden="true" /> {t("favorites")}</h2>
           <p>{t("manageSaved")}</p>
         </div>
+      </header>
+      <div className="favorites-page-list">
+        {groups.length === 0 && <p className="empty-copy">{t("savedItemsEmpty")}</p>}
+        {groups.map((group) => (
+          <FavoriteCategoryGroup
+            category={group.category}
+            favorites={group.favorites}
+            key={group.category}
+            onOpen={onOpen}
+            onRemove={removeFavorite}
+            onUpdateAlert={updateFavoriteAlert}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+const categoryIcons: Record<ItemCategory, LucideIcon> = {
+  weapon: Sword,
+  warframe: Shield,
+  mod: ScrollText,
+  relic: Disc3,
+  arcane: Sparkles,
+  companion: Bot,
+  cosmetic: Palette,
+  resource: Gem,
+  set: Boxes,
+  other: Package
+};
+
+function FavoriteCategoryGroup({
+  category,
+  favorites,
+  onOpen,
+  onRemove,
+  onUpdateAlert
+}: {
+  category: ItemCategory;
+  favorites: FavoriteSnapshot[];
+  onOpen: (slug: string) => void;
+  onRemove: (slug: string) => void;
+  onUpdateAlert: (slug: string, direction: "drop" | "rise", price: number | null) => void;
+}) {
+  const { language, t } = useI18n();
+  const [expanded, setExpanded] = useState(false);
+  const [sort, setSort] = useState<FavoriteSort>("added-newest");
+  const sortedFavorites = useMemo(() => sortFavorites(favorites, sort, language), [favorites, language, sort]);
+  const CategoryIcon = categoryIcons[category];
+  const label = t(categoryTranslationKey(category));
+
+  return (
+    <section className={expanded ? "favorite-category is-expanded" : "favorite-category"}>
+      <header className="favorite-category-header">
+        <button
+          className="favorite-category-toggle"
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+          aria-expanded={expanded}
+        >
+          <span className="favorite-category-icon"><CategoryIcon size={18} aria-hidden="true" /></span>
+          <span className="favorite-category-title">
+            <strong>{label}</strong>
+            <small>{t("itemsCount", { count: favorites.length })}</small>
+          </span>
+          <ChevronDown size={18} aria-hidden="true" />
+        </button>
         <label className="favorites-sort-control">
           <span>{t("sort")}</span>
-          <select value={sort} onChange={(event) => setSort(event.target.value as FavoriteSort)}>
+          <select value={sort} onChange={(event) => setSort(event.target.value as FavoriteSort)} aria-label={`${t("sort")} · ${label}`}>
             <option value="added-newest">{t("newestAdded")}</option>
             <option value="added-oldest">{t("oldestAdded")}</option>
             <option value="name-ascending">{t("nameAscending")}</option>
@@ -40,26 +113,52 @@ export function FavoritesPanel({ onOpen }: { onOpen: (slug: string) => void }) {
           </select>
         </label>
       </header>
-      <div className="favorites-page-list">
-        {sortedFavorites.length === 0 && <p className="empty-copy">{t("savedItemsEmpty")}</p>}
-        {sortedFavorites.map((favorite) => (
-          <article className="favorite-page-row" key={favorite.slug}>
-            <button className="favorite-page-item" type="button" onClick={() => onOpen(favorite.slug)}>
-              {favorite.thumbUrl && <img src={favorite.thumbUrl} alt="" />}
-              <span>
-                <strong>{favorite.name}</strong>
-                <small>{formatPlatinum(favorite.lastPrice)} · {t("target")} {favoriteTargetPrice(favorite)} pt</small>
-              </span>
-            </button>
-            <AlertInputs favorite={favorite} onUpdateAlert={updateFavoriteAlert} />
-            <button className="icon-button" type="button" aria-label={t("removeItem", { name: favorite.name })} onClick={() => removeFavorite(favorite.slug)}>
-              <X size={16} aria-hidden="true" />
-            </button>
-          </article>
-        ))}
-      </div>
+      {expanded && (
+        <div className="favorite-category-content">
+          {sortedFavorites.map((favorite) => (
+            <article className="favorite-page-row" key={favorite.slug}>
+              <button className="favorite-page-item" type="button" onClick={() => onOpen(favorite.slug)}>
+                {favorite.thumbUrl && <img src={favorite.thumbUrl} alt="" />}
+                <span>
+                  <strong>{favorite.name}</strong>
+                  <small>{formatPlatinum(favorite.lastPrice)} · {t("target")} {favoriteTargetPrice(favorite)} pt</small>
+                </span>
+              </button>
+              <AlertInputs favorite={favorite} onUpdateAlert={onUpdateAlert} />
+              <button className="icon-button" type="button" aria-label={t("removeItem", { name: favorite.name })} onClick={() => onRemove(favorite.slug)}>
+                <X size={16} aria-hidden="true" />
+              </button>
+            </article>
+          ))}
+        </div>
+      )}
     </section>
   );
+}
+
+function categoryTranslationKey(category: ItemCategory) {
+  return {
+    weapon: "categoryWeapon",
+    warframe: "categoryWarframe",
+    mod: "categoryMod",
+    relic: "categoryRelic",
+    arcane: "categoryArcane",
+    companion: "categoryCompanion",
+    cosmetic: "categoryCosmetic",
+    resource: "categoryResource",
+    set: "categorySet",
+    other: "categoryOther"
+  }[category] as
+    | "categoryWeapon"
+    | "categoryWarframe"
+    | "categoryMod"
+    | "categoryRelic"
+    | "categoryArcane"
+    | "categoryCompanion"
+    | "categoryCosmetic"
+    | "categoryResource"
+    | "categorySet"
+    | "categoryOther";
 }
 
 export function LibraryPanel({ onOpen, view }: Props) {
