@@ -202,10 +202,18 @@ function useProxySettings() {
   const { t } = useI18n();
   const useProxy = useSettingsStore((state) => state.useProxy);
   const proxyUrl = useSettingsStore((state) => state.proxyUrl);
-  const setUseProxy = useSettingsStore((state) => state.setUseProxy);
+  const updateUseProxy = useSettingsStore((state) => state.setUseProxy);
   const setProxyUrl = useSettingsStore((state) => state.setProxyUrl);
   const [testState, setTestState] = useState<ProxyTestState>("idle");
   const [testMessage, setTestMessage] = useState("");
+
+  function setUseProxy(enabled: boolean) {
+    updateUseProxy(enabled);
+    if (!enabled) {
+      setTestState("idle");
+      setTestMessage("");
+    }
+  }
 
   async function testProxy() {
     const normalizedProxyUrl = proxyUrl.trim();
@@ -262,34 +270,38 @@ function ProxySettings({ settings }: { settings: ProxySettingsState }) {
           onChange={(event) => settings.setUseProxy(event.target.checked)}
         />
       </label>
-      <label className="proxy-field">
-        <span>{t("proxyUrl")}</span>
-        <input
-          type="text"
-          spellCheck={false}
-          placeholder="host:port:user:password"
-          value={settings.proxyUrl}
-          onChange={(event) => settings.setProxyUrl(event.target.value)}
-        />
-      </label>
-      <p className="proxy-hint">
-        {t("proxyHint")}
-      </p>
-      <div className="proxy-test-row">
-        <button
-          className="secondary-button"
-          type="button"
-          disabled={settings.testState === "testing"}
-          onClick={() => {
-            void settings.testProxy();
-          }}
-        >
-          {settings.testState === "testing" ? t("checking") : t("testProxy")}
-        </button>
-        {settings.testMessage && (
-          <span className={`proxy-test-status ${settings.testState}`}>{settings.testMessage}</span>
-        )}
-      </div>
+      {settings.useProxy && (
+        <div className="proxy-settings-body">
+          <label className="proxy-field">
+            <span>{t("proxyUrl")}</span>
+            <input
+              type="text"
+              spellCheck={false}
+              placeholder="host:port:user:password"
+              value={settings.proxyUrl}
+              onChange={(event) => settings.setProxyUrl(event.target.value)}
+            />
+          </label>
+          <p className="proxy-hint">
+            {t("proxyHint")}
+          </p>
+          <div className="proxy-test-row">
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={settings.testState === "testing"}
+              onClick={() => {
+                void settings.testProxy();
+              }}
+            >
+              {settings.testState === "testing" ? t("checking") : t("testProxy")}
+            </button>
+            {settings.testMessage && (
+              <span className={`proxy-test-status ${settings.testState}`}>{settings.testMessage}</span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

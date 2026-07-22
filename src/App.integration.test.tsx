@@ -110,6 +110,13 @@ describe("App integration", () => {
     await userEvent.click(notificationsToggle);
     expect(notificationsToggle).not.toBeChecked();
 
+    const proxyToggle = screen.getByRole("checkbox", { name: /use proxy/i });
+    expect(screen.queryByRole("textbox", { name: /proxy url/i })).not.toBeInTheDocument();
+    await userEvent.click(proxyToggle);
+    expect(screen.getByRole("textbox", { name: /proxy url/i })).toBeInTheDocument();
+    await userEvent.click(proxyToggle);
+    expect(screen.queryByRole("textbox", { name: /proxy url/i })).not.toBeInTheDocument();
+
     await userEvent.click(screen.getByRole("button", { name: /home/i }));
     expect(screen.queryByRole("heading", { name: /settings/i })).not.toBeInTheDocument();
   });

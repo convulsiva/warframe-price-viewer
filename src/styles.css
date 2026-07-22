@@ -2350,6 +2350,17 @@ html[data-theme="light"] .ghost-button {
   background: rgba(255, 255, 255, 0.024);
 }
 
+.proxy-settings-body {
+  display: grid;
+  gap: 8px;
+  animation: surface-reveal 160ms ease-out;
+}
+
+@keyframes surface-reveal {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .updater-settings {
   display: grid;
   gap: 9px;
