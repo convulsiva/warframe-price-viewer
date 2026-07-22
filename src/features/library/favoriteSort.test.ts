@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { FavoriteSnapshot } from "../../domain/models";
-import { sortFavorites } from "./favoriteSort";
+import { filterFavorites, sortFavorites } from "./favoriteSort";
 
 function favorite(name: string, lastPrice: number | null): FavoriteSnapshot {
   return {
@@ -20,6 +20,16 @@ function favorite(name: string, lastPrice: number | null): FavoriteSnapshot {
 const favorites = [favorite("Zakti Prime", 12), favorite("Aklex Prime", null), favorite("Lex Prime", 5)];
 
 describe("favorite sorting", () => {
+  it("searches only the supplied favorites by localized and English names", () => {
+    const localized = favorite("Лекс Прайм: Комплект", 5);
+    localized.englishName = "Lex Prime Set";
+    const saved = [localized, favorite("Serration", 8)];
+
+    expect(filterFavorites(saved, "лекс")).toEqual([localized]);
+    expect(filterFavorites(saved, "lex prime")).toEqual([localized]);
+    expect(filterFavorites(saved, "not saved")).toEqual([]);
+  });
+
   it("keeps the store insertion order for newest and reverses it for oldest", () => {
     expect(sortFavorites(favorites, "added-newest", "en").map((item) => item.name)).toEqual([
       "Zakti Prime",

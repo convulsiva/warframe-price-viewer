@@ -56,6 +56,10 @@ describe("App integration", () => {
     await userEvent.click(screen.getByRole("button", { name: /save/i }));
     await waitFor(() => expect(screen.getByRole("button", { name: /saved/i })).toBeInTheDocument());
     await userEvent.click(screen.getByRole("button", { name: /^favorites$/i }));
+    const savedSearch = screen.getByRole("searchbox", { name: /search saved items/i });
+    await userEvent.type(savedSearch, "missing favorite");
+    expect(screen.getByText(/no saved items match/i)).toBeInTheDocument();
+    await userEvent.clear(savedSearch);
     await userEvent.click(screen.getByRole("button", { name: /weapons.*1 item/i }));
     expect(screen.getByText("Lex Prime Set")).toBeInTheDocument();
 

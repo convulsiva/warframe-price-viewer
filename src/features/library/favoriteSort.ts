@@ -8,6 +8,17 @@ export type FavoriteSort =
   | "price-ascending"
   | "price-descending";
 
+export function filterFavorites(favorites: FavoriteSnapshot[], query: string): FavoriteSnapshot[] {
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  if (!normalizedQuery) return favorites;
+
+  return favorites.filter((favorite) =>
+    [favorite.name, favorite.englishName, favorite.slug.replaceAll("_", " ")]
+      .filter((value): value is string => Boolean(value))
+      .some((value) => value.toLocaleLowerCase().includes(normalizedQuery))
+  );
+}
+
 export function sortFavorites(
   favorites: FavoriteSnapshot[],
   sort: FavoriteSort,

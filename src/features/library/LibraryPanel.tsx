@@ -1,4 +1,4 @@
-import { Bot, Boxes, ChevronDown, Disc3, Gem, Package, Palette, ScrollText, Shield, SlidersHorizontal, Sparkles, Star, Sword, Trash2, X } from "lucide-react";
+import { Bot, Boxes, ChevronDown, Disc3, Gem, Package, Palette, ScrollText, Search, Shield, SlidersHorizontal, Sparkles, Star, Sword, Trash2, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { FavoriteSnapshot, MarketItem } from "../../domain/models";
@@ -6,7 +6,7 @@ import { itemCategoryOrder, type ItemCategory } from "../../domain/itemCategory"
 import { formatPlatinum } from "../../lib/format";
 import { useLibraryStore } from "./store";
 import { useI18n } from "../../lib/i18n";
-import { sortFavorites, type FavoriteSort } from "./favoriteSort";
+import { filterFavorites, sortFavorites, type FavoriteSort } from "./favoriteSort";
 
 type Props = {
   onOpen: (slug: string) => void;
@@ -19,12 +19,15 @@ export function FavoritesPanel({ onOpen }: { onOpen: (slug: string) => void }) {
   const favorites = useLibraryStore((state) => state.favorites);
   const removeFavorite = useLibraryStore((state) => state.removeFavorite);
   const updateFavoriteAlert = useLibraryStore((state) => state.updateFavoriteAlert);
+  const [searchQuery, setSearchQuery] = useState("");
+  const filteredFavorites = useMemo(() => filterFavorites(favorites, searchQuery), [favorites, searchQuery]);
   const groups = useMemo(
     () => itemCategoryOrder
-      .map((category) => ({ category, favorites: favorites.filter((favorite) => (favorite.category ?? "other") === category) }))
+      .map((category) => ({ category, favorites: filteredFavorites.filter((favorite) => (favorite.category ?? "other") === category) }))
       .filter((group) => group.favorites.length > 0),
-    [favorites]
+    [filteredFavorites]
   );
+  const searchActive = searchQuery.trim().length > 0;
 
   return (
     <section className="favorites-page full-page-panel">
@@ -35,13 +38,27 @@ export function FavoritesPanel({ onOpen }: { onOpen: (slug: string) => void }) {
           <p>{t("manageSaved")}</p>
         </div>
       </header>
+      {favorites.length > 0 && (
+        <label className="favorites-saved-search">
+          <Search size={17} aria-hidden="true" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder={t("searchSavedItems")}
+            aria-label={t("searchSavedItems")}
+          />
+        </label>
+      )}
       <div className="favorites-page-list">
-        {groups.length === 0 && <p className="empty-copy">{t("savedItemsEmpty")}</p>}
+        {favorites.length === 0 && <p className="empty-copy">{t("savedItemsEmpty")}</p>}
+        {favorites.length > 0 && groups.length === 0 && <p className="empty-copy">{t("noSavedItemsFound")}</p>}
         {groups.map((group) => (
           <FavoriteCategoryGroup
             category={group.category}
             favorites={group.favorites}
             key={group.category}
+            expandForSearch={searchActive}
             onOpen={onOpen}
             onRemove={removeFavorite}
             onUpdateAlert={updateFavoriteAlert}
@@ -68,22 +85,25 @@ const categoryIcons: Record<ItemCategory, LucideIcon> = {
 function FavoriteCategoryGroup({
   category,
   favorites,
+  expandForSearch,
   onOpen,
   onRemove,
   onUpdateAlert
 }: {
   category: ItemCategory;
   favorites: FavoriteSnapshot[];
+  expandForSearch: boolean;
   onOpen: (slug: string) => void;
   onRemove: (slug: string) => void;
   onUpdateAlert: (slug: string, direction: "drop" | "rise", price: number | null) => void;
 }) {
   const { language, t } = useI18n();
-  const [expanded, setExpanded] = useState(false);
+  const [manuallyExpanded, setManuallyExpanded] = useState(false);
   const [sort, setSort] = useState<FavoriteSort>("added-newest");
   const sortedFavorites = useMemo(() => sortFavorites(favorites, sort, language), [favorites, language, sort]);
   const CategoryIcon = categoryIcons[category];
   const label = t(categoryTranslationKey(category));
+  const expanded = expandForSearch || manuallyExpanded;
 
   return (
     <section className={expanded ? "favorite-category is-expanded" : "favorite-category"}>
@@ -91,7 +111,7 @@ function FavoriteCategoryGroup({
         <button
           className="favorite-category-toggle"
           type="button"
-          onClick={() => setExpanded((value) => !value)}
+          onClick={() => setManuallyExpanded((value) => !value)}
           aria-expanded={expanded}
         >
           <span className="favorite-category-icon"><CategoryIcon size={18} aria-hidden="true" /></span>

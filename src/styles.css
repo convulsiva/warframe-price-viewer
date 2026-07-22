@@ -775,6 +775,11 @@ html[data-theme="light"] .update-modal { background: var(--panel-strong); }
 .license-page-card strong { color: var(--text); font-size: 1rem; }
 .favorites-page { grid-template-columns: 1fr; }
 .favorites-page-header { display: flex; align-items: end; justify-content: space-between; gap: 20px; }
+.favorites-saved-search { position: relative; display: flex; align-items: center; color: var(--text-muted); }
+.favorites-saved-search > svg { position: absolute; left: 13px; z-index: 1; pointer-events: none; }
+.favorites-saved-search input { width: 100%; min-height: 42px; border: 1px solid var(--line); border-radius: 6px; padding: 0 14px 0 40px; background: var(--field); color: var(--text); font-size: 0.82rem; outline: none; transition: border-color var(--transition), box-shadow var(--transition), background var(--transition); }
+.favorites-saved-search input::placeholder { color: var(--text-muted); }
+.favorites-saved-search input:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(53, 200, 243, 0.1); }
 .favorites-sort-control { display: grid; min-width: 180px; gap: 6px; color: var(--text-muted); font-size: 0.7rem; font-weight: 700; }
 .favorites-sort-control select { width: 100%; min-height: var(--field-height); border: 1px solid var(--line); border-radius: 6px; padding: 0 32px 0 10px; appearance: none; background-color: var(--field); background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%), linear-gradient(135deg, var(--text-muted) 50%, transparent 50%); background-position: calc(100% - 16px) 52%, calc(100% - 11px) 52%; background-size: 5px 5px; background-repeat: no-repeat; color: var(--text); }
 .favorites-page-list { display: grid; align-content: start; gap: 10px; }
