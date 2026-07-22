@@ -121,17 +121,19 @@ function FavoriteCategoryGroup({
           </span>
           <ChevronDown size={18} aria-hidden="true" />
         </button>
-        <label className="favorites-sort-control">
-          <span>{t("sort")}</span>
-          <select value={sort} onChange={(event) => setSort(event.target.value as FavoriteSort)} aria-label={`${t("sort")} · ${label}`}>
-            <option value="added-newest">{t("newestAdded")}</option>
-            <option value="added-oldest">{t("oldestAdded")}</option>
-            <option value="name-ascending">{t("nameAscending")}</option>
-            <option value="name-descending">{t("nameDescending")}</option>
-            <option value="price-ascending">{t("priceAscending")}</option>
-            <option value="price-descending">{t("priceDescending")}</option>
-          </select>
-        </label>
+        {expanded && (
+          <label className="favorites-sort-control">
+            <span>{t("sort")}</span>
+            <select value={sort} onChange={(event) => setSort(event.target.value as FavoriteSort)} aria-label={`${t("sort")} · ${label}`}>
+              <option value="added-newest">{t("newestAdded")}</option>
+              <option value="added-oldest">{t("oldestAdded")}</option>
+              <option value="name-ascending">{t("nameAscending")}</option>
+              <option value="name-descending">{t("nameDescending")}</option>
+              <option value="price-ascending">{t("priceAscending")}</option>
+              <option value="price-descending">{t("priceDescending")}</option>
+            </select>
+          </label>
+        )}
       </header>
       {expanded && (
         <div className="favorite-category-content">
