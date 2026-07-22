@@ -343,7 +343,11 @@ fn verify_license_at(
 }
 
 #[tauri::command]
-async fn fetch_warframe_market(path: String, proxy_url: Option<String>, language: Option<String>) -> Result<Value, String> {
+async fn fetch_warframe_market(
+    path: String,
+    proxy_url: Option<String>,
+    language: Option<String>,
+) -> Result<Value, String> {
     if !path.starts_with('/') || path.contains("..") || path.contains('\\') {
         return Err("Invalid API path".to_string());
     }
@@ -511,7 +515,6 @@ fn send_price_alert_notification(
 
     tauri::async_runtime::spawn_blocking(move || {
         let command = whisper_command;
-        let app_handle = app.clone();
         let _ = handle.wait_for_response(|response: &NotificationResponse| {
             let should_copy = matches!(
                 response,
@@ -522,7 +525,6 @@ fn send_price_alert_notification(
 
             if should_copy {
                 let _ = write_text_to_clipboard(&command);
-                show_main_window(&app_handle);
             }
         });
     });
